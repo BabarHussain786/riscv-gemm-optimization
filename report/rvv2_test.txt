@@ -1,0 +1,45 @@
+rvv2_smatmul_recursive.c
+
+RVV version, but with LMUL=2 (supported as reading on line...)
+
+in this case, is better threshold(tile) x2 of previuos
+===> the vector is greater that the previus!
+
+so, BETTER threasld (for timing) is 128 x 2 = 256
+
+
+
+
+bananapi@k1:/tmp/GEMM/scalar$ perf stat -e L1-dcache-loads,L1-dcache-load-misses ./build/riscv64/rvv2_smatmul_recursive 1024 128
+size:1024  threshold:128
+  <name_version, time[sec], size, threshold>
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 12.416899, 1024, 128
+
+ Performance counter stats for './build/riscv64/rvv2_smatmul_recursive 1024 128':
+
+     8,705,860,235      L1-dcache-loads:u                                                     
+       357,533,290      L1-dcache-load-misses:u          #    4.11% of all L1-dcache accesses 
+
+      12.658753048 seconds time elapsed
+
+      98.006913000 seconds user
+       0.414169000 seconds sys
+
+
+bananapi@k1:/tmp/GEMM/scalar$ perf stat -e L1-dcache-loads,L1-dcache-load-misses ./build/riscv64/rvv2_smatmul_recursive 1024 256
+size:1024  threshold:256
+  <name_version, time[sec], size, threshold>
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 10.844453, 1024, 256
+
+ Performance counter stats for './build/riscv64/rvv2_smatmul_recursive 1024 256':
+
+     8,671,040,744      L1-dcache-loads:u                                                     
+       371,252,360      L1-dcache-load-misses:u          #    4.28% of all L1-dcache accesses 
+
+      11.087950130 seconds time elapsed
+
+      84.113445000 seconds user
+       0.315031000 seconds sys
+
+
+

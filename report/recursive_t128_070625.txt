@@ -1,0 +1,36 @@
+Testsuite V3
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/smatmul_recursive
+Size: START:128 -> END:4096, 3-Retry foreach experiment
+Additional Args: 128
+ 
+> Size: 128
+> BENCHMARK_RECORD : smatmul_recursive 0.011303, 128, 128
+> BENCHMARK_RECORD : smatmul_recursive 0.011260, 128, 128
+> BENCHMARK_RECORD : smatmul_recursive 0.011426, 128, 128
+ 
+> Size: 256
+> BENCHMARK_RECORD : smatmul_recursive 0.178141, 256, 128
+> BENCHMARK_RECORD : smatmul_recursive 0.169267, 256, 128
+> BENCHMARK_RECORD : smatmul_recursive 0.184208, 256, 128
+ 
+> Size: 512
+> BENCHMARK_RECORD : smatmul_recursive 2.080983, 512, 128
+> BENCHMARK_RECORD : smatmul_recursive 2.054004, 512, 128
+> BENCHMARK_RECORD : smatmul_recursive 1.925551, 512, 128
+ 
+> Size: 1024
+> BENCHMARK_RECORD : smatmul_recursive 13.646131, 1024, 128
+> BENCHMARK_RECORD : smatmul_recursive 14.517096, 1024, 128
+> BENCHMARK_RECORD : smatmul_recursive 15.177965, 1024, 128
+ 
+> Size: 2048
+> BENCHMARK_RECORD : smatmul_recursive 156.625846, 2048, 128
+> BENCHMARK_RECORD : smatmul_recursive 163.512206, 2048, 128
+> BENCHMARK_RECORD : smatmul_recursive 154.813658, 2048, 128
+ 
+> Size: 4096
+> BENCHMARK_RECORD : smatmul_recursive 1763.257436, 4096, 128
+> BENCHMARK_RECORD : smatmul_recursive 1744.682954, 4096, 128
+> BENCHMARK_RECORD : smatmul_recursive 1771.266675, 4096, 128
+ 

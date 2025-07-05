@@ -1,0 +1,22 @@
+BEST access with threshold(tile) 128, not 64
+perhapse the size of vector lengh???
+
+BUT for previus (parallel) it was also better 128, so ...
+
+---> in percentage, minor cache miss! (empirically ..)
+
+perf stat -e L1-dcache-loads,L1-dcache-load-misses ./build/riscv64/rvv_smatmul_recursive 1024 128
+size:1024  threshold:128
+  <name_version, time[sec], size, threshold>
+> BENCHMARK_RECORD : rvv_smatmul_recursive 12.255500, 1024, 128
+
+ Performance counter stats for './build/riscv64/rvv_smatmul_recursive 1024 128':
+
+     8,705,986,204      L1-dcache-loads:u                                                     
+       357,274,298      L1-dcache-load-misses:u          #    4.10% of all L1-dcache accesses 
+
+      12.494997881 seconds time elapsed
+
+      97.287682000 seconds user
+       0.239251000 seconds sys
+
