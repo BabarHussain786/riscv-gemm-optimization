@@ -1,27 +1,131 @@
 
-See in this order
-(scalar)
-1)smatmul_baseline.c
-2)smatmul_loopinterchange.c
-3)smatmul_pfor.c
-4)smatmul_tiling.c  ( + version v2, v3, v4 )
-5)smatmul_recursive.c
+# 🚀 Matrix Multiplication Optimization on RISC-V Architecture
 
-(vectorial)
-6)rvv_smatmul_recursive.c  (LMUL=1)
-7)rvv2_smatmul_recursive.c (LMUL=2)
+This repository contains optimized implementations of matrix multiplication algorithms targeting RISC-V platforms, including **Banana Pi** and **Spacemit X60**. The project demonstrates the impact of algorithmic and compiler-level optimizations on performance, including techniques like **loop interchange**, **recursive divide-and-conquer**, **tiling**, **OpenMP parallelization**, and **auto-vectorization** using **RISC-V Vector Extension (RVV)**.
 
+---
 
-------------------
+## 📌 Project Overview
 
-If there was benchmark in execution, 
-try to check in the screen name "benchmark"
+Matrix multiplication is a core operation in numerous fields, from scientific computing to machine learning. Optimizing this computation on emerging open architectures like RISC-V is critical for building scalable and energy-efficient systems.
 
-1. Make a screen:
-screen -S benchmark
+This project investigates and benchmarks various optimization techniques and evaluates their performance on real RISC-V hardware.
 
-2. detach
-ctrl-a then d
+---
 
-3. Resume the screen:
-screen -r benchmark
+## 🛠️ Optimizations Implemented
+
+| Optimization Technique       | Description                                                                 |
+|-----------------------------|-----------------------------------------------------------------------------|
+| 🔁 Loop Interchange         | Improves cache locality by reordering loops                                 |
+| 🔄 Recursive Multiplication | Divides matrices into smaller blocks for better cache usage                 |
+| 🧱 Tiling (Blocking)        | Splits matrices into tiles to enhance memory access patterns                |
+| 💥 OpenMP Parallelization   | Enables multi-core parallel execution                                       |
+| 🧠 RVV Autovectorization    | Leverages RISC-V Vector Extensions for data-level parallelism               |
+
+---
+
+## 📦 Repository Structure
+
+```
+📁 matrix-multiplication-riscv
+├── src/                  # Source code in C
+│   ├── matmul_baseline.c
+│   ├── matmul_recursive.c
+│   ├── matmul_tiling.c
+│   └── ...
+├── Makefile              # Build automation
+├── README.md             # This file
+└── report/               # Final report (PDF)
+    └── Final Report.pdf
+```
+
+---
+
+## 🧰 Setup Instructions
+
+### 1. 🧑‍💻 Install RISC-V Toolchain
+
+```bash
+sudo apt-get install gcc-riscv64-linux-gnu
+```
+
+### 2. 📝 Compile Matrix Multiplication Code
+
+```bash
+riscv64-unknown-elf-gcc -O3 -march=rv64imac -mabi=lp64 -o matmul_rv src/matmul_recursive.c
+```
+
+> Replace `matmul_recursive.c` with your chosen implementation.
+
+### 3. 🏃 Run the Executable on RISC-V
+
+Run on actual hardware (e.g., Banana Pi) or via a RISC-V simulator:
+
+```bash
+./matmul_rv
+```
+
+### 4. 📈 Benchmark with `perf`
+
+```bash
+perf stat -e L1-dcache-loads,L1-dcache-load-misses ./matmul_rv
+```
+
+---
+
+## 📊 Results Summary
+
+| Method               | Matrix Size | Time (s) | Speedup |
+|---------------------|-------------|----------|---------|
+| Baseline            | 4096×4096   | 15755.16 | 1.0×    |
+| Loop Interchange    | 4096×4096   | 379.62   | 41.5×   |
+| Recursive (128)     | 4096×4096   | 1712.26  | 9.2×    |
+| Tiled OpenMP        | 1024×1024   | 17.21    | 13.1×   |
+| RVV2 Recursive       | 4096×4096   | ~        | 1.0–2.6×|
+
+> Full benchmarking details and graphs are available in the [Final Report](report/Final%20Report.pdf).
+
+---
+
+## 🔍 Key Learnings
+
+- **Compiler optimization flags matter**: `-O3` significantly boosts performance.
+- **Algorithm-architecture synergy**: Recursive and tiling methods effectively utilize RISC-V memory hierarchies.
+- **Parallelism is powerful**: OpenMP and RVV extensions scale well on multi-core RISC-V chips.
+
+---
+
+## 📚 References
+
+- [RISC-V GCC Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
+- [OpenMP Official Site](https://www.openmp.org/)
+- [RISC-V Vector Extension (RVV)](https://github.com/riscv/riscv-v-spec)
+
+---
+
+## ✍️ Authors
+
+- **Babar Hussain** – University of Salerno
+- **Sergio Guastaferro** – University of Salerno
+
+---
+
+## 📜 License
+
+This project is licensed under the [Creative Commons CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0/). You are free to share and adapt with proper attribution.
+
+---
+
+## 🤖 AI Disclosure
+
+Parts of the report were assisted using generative AI for drafting and formatting. All technical content was authored and validated by the project contributors.
+
+---
+
+## 🙏 Acknowledgments
+
+Special thanks to the **ISIS Lab** and the **University of Salerno – HPC Course** for providing hardware access and academic support.
+
+---
+
