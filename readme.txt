@@ -117,15 +117,8 @@ This project is licensed under the [Creative Commons CC BY 4.0 License](https://
 
 ---
 
-## 🤖 AI Disclosure
-
-Parts of the report were assisted using generative AI for drafting and formatting. All technical content was authored and validated by the project contributors.
-
----
-
 ## 🙏 Acknowledgments
 
 Special thanks to the **ISIS Lab** and the **University of Salerno – HPC Course** for providing hardware access and academic support.
 
----
 
