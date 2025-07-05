@@ -1,7 +1,7 @@
 
 # 🚀 Matrix Multiplication Optimization on RISC-V Architecture
 
-This repository contains optimized implementations of matrix multiplication algorithms targeting RISC-V platforms, including **Banana Pi** and **Spacemit X60**. The project demonstrates the impact of algorithmic and compiler-level optimizations on performance, including techniques like **loop interchange**, **recursive divide-and-conquer**, **tiling**, **OpenMP parallelization**, and **auto-vectorization** using **RISC-V Vector Extension (RVV)**.
+This repository contains optimized implementations of matrix multiplication algorithms targeting RISC-V platforms of Banana Pi Board. The project demonstrates the impact of algorithmic and compiler-level optimizations on performance, including techniques like **loop interchange**, **recursive divide-and-conquer**, **tiling**, **OpenMP parallelization**, and **auto-vectorization** using Scalar and **RISC-V Vector Extension (RVV)**.
 
 ---
 
@@ -99,7 +99,6 @@ perf stat -e L1-dcache-loads,L1-dcache-load-misses ./matmul_rv
 ## 📚 References
 
 - [RISC-V GCC Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
-- [OpenMP Official Site](https://www.openmp.org/)
 - [RISC-V Vector Extension (RVV)](https://github.com/riscv/riscv-v-spec)
 
 ---
