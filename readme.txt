@@ -111,12 +111,6 @@ perf stat -e L1-dcache-loads,L1-dcache-load-misses ./matmul_rv
 
 ---
 
-## 📜 License
-
-This project is licensed under the [Creative Commons CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0/). You are free to share and adapt with proper attribution.
-
----
-
 ## 🙏 Acknowledgments
 
 Special thanks to the **ISIS Lab** and the **University of Salerno – HPC Course** for providing hardware access and academic support.
