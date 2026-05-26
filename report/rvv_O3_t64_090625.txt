@@ -1,0 +1,41 @@
+Testsuite V3
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/rvv_smatmul_recursive_O3
+Size: START:64 -> END:4096, 3-Retry foreach experiment
+Additional Args: 64
+ 
+> Size: 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.000810, 64, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.000844, 64, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.000908, 64, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.019566, 128, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.025122, 128, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.017715, 128, 64
+ 
+> Size: 256
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.180928, 256, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.172770, 256, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 0.176264, 256, 64
+ 
+> Size: 512
+> BENCHMARK_RECORD : rvv_smatmul_recursive 1.922510, 512, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 1.797303, 512, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 1.894276, 512, 64
+ 
+> Size: 1024
+> BENCHMARK_RECORD : rvv_smatmul_recursive 20.715346, 1024, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 17.124348, 1024, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 18.493205, 1024, 64
+ 
+> Size: 2048
+> BENCHMARK_RECORD : rvv_smatmul_recursive 303.423387, 2048, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 288.662240, 2048, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 280.651212, 2048, 64
+ 
+> Size: 4096
+> BENCHMARK_RECORD : rvv_smatmul_recursive 2582.935925, 4096, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 1995.804569, 4096, 64
+> BENCHMARK_RECORD : rvv_smatmul_recursive 2636.870973, 4096, 64
+ 

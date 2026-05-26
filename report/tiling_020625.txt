@@ -1,0 +1,40 @@
+Testsuite V2
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/smatmul_tiling
+Size: START:64 -> END:4096, 3-Retry foreach experiment
+ 
+> Size: 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.002604, 64, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.002577, 64, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.002656, 64, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : smatmul_tiling, 0.006032, 128, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.005817, 128, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.006737, 128, 64
+ 
+> Size: 256
+> BENCHMARK_RECORD : smatmul_tiling, 0.024901, 256, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.025287, 256, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.025089, 256, 64
+ 
+> Size: 512
+> BENCHMARK_RECORD : smatmul_tiling, 0.325591, 512, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.336704, 512, 64
+> BENCHMARK_RECORD : smatmul_tiling, 0.341285, 512, 64
+ 
+> Size: 1024
+> BENCHMARK_RECORD : smatmul_tiling, 3.544833, 1024, 64
+> BENCHMARK_RECORD : smatmul_tiling, 3.568558, 1024, 64
+> BENCHMARK_RECORD : smatmul_tiling, 3.352239, 1024, 64
+ 
+> Size: 2048
+> BENCHMARK_RECORD : smatmul_tiling, 43.133091, 2048, 64
+> BENCHMARK_RECORD : smatmul_tiling, 40.126596, 2048, 64
+> BENCHMARK_RECORD : smatmul_tiling, 41.321876, 2048, 64
+ 
+> Size: 4096
+> BENCHMARK_RECORD : smatmul_tiling, 281.562728, 4096, 64
+> BENCHMARK_RECORD : smatmul_tiling, 273.472160, 4096, 64
+> BENCHMARK_RECORD : smatmul_tiling, 274.238605, 4096, 64
+ 

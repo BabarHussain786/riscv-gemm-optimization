@@ -1,0 +1,65 @@
+Testsuite V2
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/smatmul_loopinterchange_O2
+Size: START:2 -> END:4096, 3-Retry foreach experiment
+ 
+> Size: 2
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000005, 2
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000005, 2
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000008, 2
+ 
+> Size: 4
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000008, 4
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000008, 4
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000007, 4
+ 
+> Size: 8
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000009, 8
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000010, 8
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000010, 8
+ 
+> Size: 16
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000031, 16
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000031, 16
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000029, 16
+ 
+> Size: 32
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000182, 32
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000181, 32
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.000181, 32
+ 
+> Size: 64
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.001453, 64
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.001422, 64
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.001391, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.011702, 128
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.011377, 128
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.011411, 128
+ 
+> Size: 256
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.090876, 256
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.089725, 256
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.089605, 256
+ 
+> Size: 512
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.725855, 512
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.730527, 512
+> BENCHMARK_RECORD : smatmul_loopinterchange, 0.727174, 512
+ 
+> Size: 1024
+> BENCHMARK_RECORD : smatmul_loopinterchange, 6.250884, 1024
+> BENCHMARK_RECORD : smatmul_loopinterchange, 6.240634, 1024
+> BENCHMARK_RECORD : smatmul_loopinterchange, 6.246244, 1024
+ 
+> Size: 2048
+> BENCHMARK_RECORD : smatmul_loopinterchange, 47.345546, 2048
+> BENCHMARK_RECORD : smatmul_loopinterchange, 47.483700, 2048
+> BENCHMARK_RECORD : smatmul_loopinterchange, 47.501509, 2048
+ 
+> Size: 4096
+> BENCHMARK_RECORD : smatmul_loopinterchange, 386.523973, 4096
+> BENCHMARK_RECORD : smatmul_loopinterchange, 386.340685, 4096
+> BENCHMARK_RECORD : smatmul_loopinterchange, 393.977145, 4096
+ 

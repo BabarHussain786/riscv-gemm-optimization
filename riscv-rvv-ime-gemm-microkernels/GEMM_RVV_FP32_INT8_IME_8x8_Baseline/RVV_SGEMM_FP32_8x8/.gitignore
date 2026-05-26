@@ -1,0 +1,20 @@
+# Build artifacts
+bench
+*.o
+*.obj
+*.out
+*.exe
+
+# Benchmark logs/results
+*.log
+summary_results/
+summary_results_1024/
+cluster0_results/
+cluster1_results/
+core0_ai_results/
+core4_general_results/
+
+# Temp/system
+*.tmp
+.DS_Store
+Thumbs.db

@@ -1,0 +1,79 @@
+Testsuite V3
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/rvv2_smatmul_recursive
+Size: START:64 -> END:4096, 3-Retry foreach experiment
+Additional Args: 64
+ 
+> Size: 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000621, 64, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000873, 64, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000652, 64, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.016225, 128, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.018731, 128, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.015756, 128, 64
+ 
+> Size: 256
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.197460, 256, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.192541, 256, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.184323, 256, 64
+ 
+> Size: 512
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 1.957610, 512, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2.433743, 512, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2.004228, 512, 64
+ 
+> Size: 1024
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 17.466238, 1024, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 18.126095, 1024, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 19.172989, 1024, 64
+ 
+> Size: 2048
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 187.401204, 2048, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 186.946899, 2048, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 191.579075, 2048, 64
+ 
+> Size: 4096
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2676.532573, 4096, 64
+Testsuite V3
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/rvv2_smatmul_recursive
+Size: START:64 -> END:4096, 3-Retry foreach experiment
+Additional Args: 64
+ 
+> Size: 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000678, 64, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000638, 64, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.000671, 64, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.017527, 128, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.017055, 128, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.016514, 128, 64
+ 
+> Size: 256
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.171214, 256, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.178194, 256, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 0.177706, 256, 64
+ 
+> Size: 512
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 1.812591, 512, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 1.812363, 512, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 1.755642, 512, 64
+ 
+> Size: 1024
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 17.539054, 1024, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 16.434086, 1024, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 16.459679, 1024, 64
+ 
+> Size: 2048
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 195.003523, 2048, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 179.523110, 2048, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 192.412943, 2048, 64
+ 
+> Size: 4096
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2682.217810, 4096, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2723.106887, 4096, 64
+> BENCHMARK_RECORD : rvv2_smatmul_recursive 2710.481502, 4096, 64
+ 

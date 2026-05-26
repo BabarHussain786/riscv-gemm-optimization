@@ -1,0 +1,20 @@
+Assembly Instruction Counts (RVV FP64)
+==========================================================
+Kernel Name                              | vfmacc | vfmul  | vle64  | vse64 
+--------------------------------------------------------------------------------
+dgemm_kernel_8x4_zvl128b_lmul1_unroll1   | 62     | 53     | 33     | 14    
+dgemm_kernel_8x4_zvl128b_lmul1_unroll2   | 120    | 53     | 45     | 14    
+dgemm_kernel_8x4_zvl128b_lmul1_unroll4   | 264    | 53     | 69     | 14    
+dgemm_kernel_8x4_zvl128b_lmul1_unroll8   | 536    | 53     | 117    | 14    
+dgemm_kernel_8x4_zvl128b_lmul2_unroll1   | 62     | 53     | 33     | 14    
+dgemm_kernel_8x4_zvl128b_lmul2_unroll2   | 120    | 53     | 45     | 14    
+dgemm_kernel_8x4_zvl128b_lmul2_unroll4   | 264    | 53     | 69     | 14    
+dgemm_kernel_8x4_zvl128b_lmul2_unroll8   | 536    | 53     | 117    | 14    
+dgemm_kernel_8x4_zvl128b_lmul4_unroll1   | 62     | 53     | 33     | 14    
+dgemm_kernel_8x4_zvl128b_lmul4_unroll2   | 120    | 53     | 45     | 14    
+dgemm_kernel_8x4_zvl128b_lmul4_unroll4   | 264    | 53     | 69     | 14    
+dgemm_kernel_8x4_zvl128b_lmul4_unroll8   | 536    | 53     | 117    | 14    
+dgemm_kernel_8x4_zvl128b_lmul8_unroll1   | 41     | 18     | 13     | 7     
+dgemm_kernel_8x4_zvl128b_lmul8_unroll2   | 157    | 59     | 45     | 14    
+dgemm_kernel_8x4_zvl128b_lmul8_unroll4   | 329    | 59     | 69     | 14    
+dgemm_kernel_8x4_zvl128b_lmul8_unroll8   | 646    | 59     | 117    | 14    

@@ -1,0 +1,77 @@
+Testsuite V2
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/smatmul_baseline
+Size: START:2 -> END:4096, 4-Retry foreach experiment
+ 
+> Size: 2
+> BENCHMARK_RECORD : smatmul_baseline, 0.000007, 2
+> BENCHMARK_RECORD : smatmul_baseline, 0.000007, 2
+> BENCHMARK_RECORD : smatmul_baseline, 0.000008, 2
+> BENCHMARK_RECORD : smatmul_baseline, 0.000007, 2
+ 
+> Size: 4
+> BENCHMARK_RECORD : smatmul_baseline, 0.000011, 4
+> BENCHMARK_RECORD : smatmul_baseline, 0.000012, 4
+> BENCHMARK_RECORD : smatmul_baseline, 0.000009, 4
+> BENCHMARK_RECORD : smatmul_baseline, 0.000012, 4
+ 
+> Size: 8
+> BENCHMARK_RECORD : smatmul_baseline, 0.000037, 8
+> BENCHMARK_RECORD : smatmul_baseline, 0.000037, 8
+> BENCHMARK_RECORD : smatmul_baseline, 0.000036, 8
+> BENCHMARK_RECORD : smatmul_baseline, 0.000035, 8
+ 
+> Size: 16
+> BENCHMARK_RECORD : smatmul_baseline, 0.000234, 16
+> BENCHMARK_RECORD : smatmul_baseline, 0.000234, 16
+> BENCHMARK_RECORD : smatmul_baseline, 0.000233, 16
+> BENCHMARK_RECORD : smatmul_baseline, 0.000233, 16
+ 
+> Size: 32
+> BENCHMARK_RECORD : smatmul_baseline, 0.001804, 32
+> BENCHMARK_RECORD : smatmul_baseline, 0.001809, 32
+> BENCHMARK_RECORD : smatmul_baseline, 0.001852, 32
+> BENCHMARK_RECORD : smatmul_baseline, 0.001866, 32
+ 
+> Size: 64
+> BENCHMARK_RECORD : smatmul_baseline, 0.014936, 64
+> BENCHMARK_RECORD : smatmul_baseline, 0.015020, 64
+> BENCHMARK_RECORD : smatmul_baseline, 0.014917, 64
+> BENCHMARK_RECORD : smatmul_baseline, 0.014957, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : smatmul_baseline, 0.129057, 128
+> BENCHMARK_RECORD : smatmul_baseline, 0.128565, 128
+> BENCHMARK_RECORD : smatmul_baseline, 0.128910, 128
+> BENCHMARK_RECORD : smatmul_baseline, 0.128488, 128
+ 
+> Size: 256
+> BENCHMARK_RECORD : smatmul_baseline, 1.413941, 256
+> BENCHMARK_RECORD : smatmul_baseline, 1.404811, 256
+> BENCHMARK_RECORD : smatmul_baseline, 1.417161, 256
+> BENCHMARK_RECORD : smatmul_baseline, 1.778144, 256
+ 
+> Size: 512
+> BENCHMARK_RECORD : smatmul_baseline, 36.840360, 512
+> BENCHMARK_RECORD : smatmul_baseline, 36.841079, 512
+> BENCHMARK_RECORD : smatmul_baseline, 36.739595, 512
+> BENCHMARK_RECORD : smatmul_baseline, 36.623709, 512
+ 
+> Size: 1024
+> BENCHMARK_RECORD : smatmul_baseline, 311.280191, 1024
+> BENCHMARK_RECORD : smatmul_baseline, 312.043367, 1024
+> BENCHMARK_RECORD : smatmul_baseline, 311.366449, 1024
+> BENCHMARK_RECORD : smatmul_baseline, 312.489676, 1024
+ 
+> Size: 2048
+> BENCHMARK_RECORD : smatmul_baseline, 2623.452129, 2048
+> BENCHMARK_RECORD : smatmul_baseline, 2622.536387, 2048
+> BENCHMARK_RECORD : smatmul_baseline, 2654.965725, 2048
+> BENCHMARK_RECORD : smatmul_baseline, 2619.692192, 2048
+ 
+> Size: 4096
+> BENCHMARK_RECORD : smatmul_baseline, 22616.188089, 4096
+> BENCHMARK_RECORD : smatmul_baseline, 22411.786409, 4096
+> BENCHMARK_RECORD : smatmul_baseline, 22603.990684, 4096
+> BENCHMARK_RECORD : smatmul_baseline, 22283.491737, 4096
+ 

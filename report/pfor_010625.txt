@@ -1,0 +1,65 @@
+Testsuite V2
+Arch: riscv64 (EXECUTION MODE)
+Target: build/riscv64/smatmul_pfor
+Size: START:2 -> END:4096, 3-Retry foreach experiment
+ 
+> Size: 2
+> BENCHMARK_RECORD : smatmul_pfor, 0.001189, 2
+> BENCHMARK_RECORD : smatmul_pfor, 0.001192, 2
+> BENCHMARK_RECORD : smatmul_pfor, 0.001214, 2
+ 
+> Size: 4
+> BENCHMARK_RECORD : smatmul_pfor, 0.002026, 4
+> BENCHMARK_RECORD : smatmul_pfor, 0.001265, 4
+> BENCHMARK_RECORD : smatmul_pfor, 0.001926, 4
+ 
+> Size: 8
+> BENCHMARK_RECORD : smatmul_pfor, 0.002714, 8
+> BENCHMARK_RECORD : smatmul_pfor, 0.002000, 8
+> BENCHMARK_RECORD : smatmul_pfor, 0.002128, 8
+ 
+> Size: 16
+> BENCHMARK_RECORD : smatmul_pfor, 0.001174, 16
+> BENCHMARK_RECORD : smatmul_pfor, 0.002139, 16
+> BENCHMARK_RECORD : smatmul_pfor, 0.001212, 16
+ 
+> Size: 32
+> BENCHMARK_RECORD : smatmul_pfor, 0.002093, 32
+> BENCHMARK_RECORD : smatmul_pfor, 0.002017, 32
+> BENCHMARK_RECORD : smatmul_pfor, 0.002140, 32
+ 
+> Size: 64
+> BENCHMARK_RECORD : smatmul_pfor, 0.001432, 64
+> BENCHMARK_RECORD : smatmul_pfor, 0.001381, 64
+> BENCHMARK_RECORD : smatmul_pfor, 0.002522, 64
+ 
+> Size: 128
+> BENCHMARK_RECORD : smatmul_pfor, 0.002776, 128
+> BENCHMARK_RECORD : smatmul_pfor, 0.004903, 128
+> BENCHMARK_RECORD : smatmul_pfor, 0.004446, 128
+ 
+> Size: 256
+> BENCHMARK_RECORD : smatmul_pfor, 0.013248, 256
+> BENCHMARK_RECORD : smatmul_pfor, 0.013036, 256
+> BENCHMARK_RECORD : smatmul_pfor, 0.014598, 256
+ 
+> Size: 512
+> BENCHMARK_RECORD : smatmul_pfor, 0.103287, 512
+> BENCHMARK_RECORD : smatmul_pfor, 0.104745, 512
+> BENCHMARK_RECORD : smatmul_pfor, 0.103422, 512
+ 
+> Size: 1024
+> BENCHMARK_RECORD : smatmul_pfor, 1.135704, 1024
+> BENCHMARK_RECORD : smatmul_pfor, 1.103364, 1024
+> BENCHMARK_RECORD : smatmul_pfor, 1.123960, 1024
+ 
+> Size: 2048
+> BENCHMARK_RECORD : smatmul_pfor, 10.446170, 2048
+> BENCHMARK_RECORD : smatmul_pfor, 10.061990, 2048
+> BENCHMARK_RECORD : smatmul_pfor, 10.099701, 2048
+ 
+> Size: 4096
+> BENCHMARK_RECORD : smatmul_pfor, 97.281799, 4096
+> BENCHMARK_RECORD : smatmul_pfor, 97.807175, 4096
+> BENCHMARK_RECORD : smatmul_pfor, 97.849283, 4096
+ 
