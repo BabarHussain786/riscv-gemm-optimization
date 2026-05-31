@@ -87,6 +87,9 @@ static int rvv_fallback_gemm_s8s8(
     BLASLONG M, BLASLONG N, BLASLONG K, int32_t alpha,
     const int8_t *A, const int8_t *B, int32_t *C, BLASLONG ldc)
 {
+#if defined(SPACEMIT_IME_REQUIRE_HARDWARE)
+    return -99;
+#endif
     size_t a_count;
     size_t b_count;
     int8_t *A_rvv = NULL;

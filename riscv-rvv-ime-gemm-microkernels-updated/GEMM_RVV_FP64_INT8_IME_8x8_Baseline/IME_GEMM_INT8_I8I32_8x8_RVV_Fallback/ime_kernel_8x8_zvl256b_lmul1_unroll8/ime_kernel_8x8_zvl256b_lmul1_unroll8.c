@@ -69,6 +69,9 @@ static int rvv_fallback_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
                                   int32_t alpha,
                                   const int8_t *A, const int8_t *B,
                                   int32_t *C, BLASLONG ldc) {
+#if defined(SPACEMIT_IME_REQUIRE_HARDWARE)
+    return -99;
+#endif
 #if SPACEMIT_IME_HAS_RVV
     return igemm_kernel_8x8_zvl256b_lmul1_unroll8_i8i32(M, N, K, alpha, (GEMM_I8 *)A, (GEMM_I8 *)B, C, ldc);
 #else

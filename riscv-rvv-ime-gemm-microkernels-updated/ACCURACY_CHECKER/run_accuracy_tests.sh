@@ -28,7 +28,9 @@ ABI="${ABI:-lp64d}"
 CFLAGS_COMMON="${CFLAGS_COMMON:--O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas}"
 RVV128_MARCH="${RVV128_MARCH:-rv64gcv_zvl128b}"
 RVV256_MARCH="${RVV256_MARCH:-rv64gcv_zvl256b}"
-INPUT_CLASSES="${INPUT_CLASSES:-uniform wide_range cancellation}"
+BASE_SEED="${BASE_SEED:-20260531}"
+FP_INPUT_CLASSES="${FP_INPUT_CLASSES:-bounded_uniform wide_range cancellation_stress}"
+INT8_INPUT_CLASSES="${INT8_INPUT_CLASSES:-bounded_uniform full_range_uniform mixed_magnitude cancellation_stress}"
 
 mkdir -p "${BUILD_DIR}" "${RAW_LOG_DIR}"
 : > "${LATEST_LOG}"
@@ -73,6 +75,7 @@ include_kind_in_mode()
     case "${MODE}:${kind}" in
         all:*) return 0 ;;
         k1-rvv:FP32_RVV|k1-rvv:FP64_RVV|k1-rvv:INT8_RVV) return 0 ;;
+        k1-ime:INT8_IME) return 0 ;;
         k3-rvv:FP32_RVV|k3-rvv:FP64_RVV|k3-rvv:INT8_RVV) return 0 ;;
         k3-ime:INT8_IME) return 0 ;;
         local:*) return 0 ;;
@@ -86,9 +89,40 @@ core_list_for_kind()
 
     case "${MODE}:${kind}" in
         k1-rvv:*|k3-rvv:*) printf '0 1 2 3 4 5 6 7' ;;
+        k1-ime:*) printf '0 1 2 3' ;;
         k3-ime:*) printf '8 9 10 11 12 13 14 15' ;;
         *) printf 'NA' ;;
     esac
+}
+
+input_classes_for_kind()
+{
+    case "$1" in
+        FP32_RVV|FP64_RVV) printf '%s' "${FP_INPUT_CLASSES}" ;;
+        INT8_RVV|INT8_IME) printf '%s' "${INT8_INPUT_CLASSES}" ;;
+        *) return 1 ;;
+    esac
+}
+
+execution_path_for_kind()
+{
+    case "$1" in
+        INT8_IME) printf 'IME_VMADOT_REQUIRED' ;;
+        FP32_RVV|FP64_RVV|INT8_RVV) printf 'RVV_NATIVE' ;;
+        *) printf 'UNKNOWN' ;;
+    esac
+}
+
+core_supports_required_path()
+{
+    local kind="$1"
+    local core="$2"
+
+    if [ "${kind}" != "INT8_IME" ] || [ "${core}" = "NA" ]; then
+        return 0
+    fi
+
+    [ -f "/sys/firmware/devicetree/base/cpus/cpu@${core}/cpu-ai" ]
 }
 
 prepare_core_access()
@@ -116,17 +150,22 @@ compile_kernel()
     shift 7
     local sources=("$@")
     local define_kind=""
+    local extra_defines=()
 
     case "${kind}" in
         FP32_RVV) define_kind="-DACC_KIND_FP32" ;;
         FP64_RVV) define_kind="-DACC_KIND_FP64" ;;
         INT8_RVV) define_kind="-DACC_KIND_INT8_RVV" ;;
-        INT8_IME) define_kind="-DACC_KIND_INT8_IME" ;;
+        INT8_IME)
+            define_kind="-DACC_KIND_INT8_IME"
+            extra_defines+=("-DSPACEMIT_IME_REQUIRE_HARDWARE=1")
+            ;;
         *) return 1 ;;
     esac
 
     "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
-        "${define_kind}" -DKERNEL_SYMBOL="${symbol}" -DACC_MR="${mr}" -DACC_NR="${nr}" \
+        "${define_kind}" "${extra_defines[@]}" \
+        -DKERNEL_SYMBOL="${symbol}" -DACC_MR="${mr}" -DACC_NR="${nr}" \
         "${HARNESS}" "${sources[@]}" -lm -o "${exe}" > "${build_log}" 2>&1
 }
 
@@ -140,14 +179,16 @@ kind_label()
     esac
 }
 
-printf 'timestamp,mode,core,baseline,family,kernel,datatype,tile_shape,zvl,lmul,unroll,input_class,M,N,K,run,status,return_code,max_abs_error,mean_abs_error,max_rel_error,mean_rel_error,mismatch_count,max_integer_difference,overflow_count,log_file\n' > "${CSV}"
+printf 'timestamp,mode,core,execution_path,seed,baseline,family,kernel,datatype,tile_shape,zvl,lmul,unroll,input_class,M,N,K,run,status,return_code,max_abs_error,mean_abs_error,max_rel_error,mean_rel_error,frobenius_relative_error,max_bound_ratio,bound_failure_count,nonfinite_count,mismatch_count,max_integer_difference,overflow_count,log_file\n' > "${CSV}"
 
 log "Accuracy checker"
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
 log "Matrix size is fixed to 1024x1024x1024 for this project."
 log "PROJECT_ROOT=${PROJECT_ROOT}"
 log "RESULT_DIR=${RESULT_DIR}"
-log "INPUT_CLASSES=${INPUT_CLASSES}"
+log "BASE_SEED=${BASE_SEED}"
+log "FP_INPUT_CLASSES=${FP_INPUT_CLASSES}"
+log "INT8_INPUT_CLASSES=${INT8_INPUT_CLASSES}"
 grep Cpus_allowed_list /proc/self/status 2>/dev/null | tee -a "${LATEST_LOG}" || true
 
 kernel_count=0
@@ -197,6 +238,7 @@ while IFS= read -r -d '' makefile; do
     mr="$(printf '%s\n' "${tile_shape}" | cut -dx -f1)"
     nr="$(printf '%s\n' "${tile_shape}" | cut -dx -f2)"
     datatype="$(kind_label "${kind}")"
+    execution_path="$(execution_path_for_kind "${kind}")"
     march="${RVV128_MARCH}"
 
     if [ -z "${mr}" ] || [ -z "${nr}" ]; then
@@ -224,53 +266,66 @@ while IFS= read -r -d '' makefile; do
     if ! compile_kernel "${kind}" "${march}" "${symbol}" "${mr}" "${nr}" "${exe}" "${build_log}" "${sources[@]}"; then
         build_failed_count=$((build_failed_count + 1))
         log "BUILD_FAILED: ${build_log}"
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
-            "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "NA" "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "NA" "${execution_path}" "NA" \
+            "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
             "${datatype}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "NA" "${M}" "${N}" "${K}" "0" \
-            "BUILD_FAILED" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "$(csv_quote "${build_log}")" >> "${CSV}"
+            "BUILD_FAILED" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "$(csv_quote "${build_log}")" >> "${CSV}"
         continue
     fi
 
     kernel_count=$((kernel_count + 1))
     prepare_core_access "${kind}"
     cores="$(core_list_for_kind "${kind}")"
+    input_classes="$(input_classes_for_kind "${kind}")"
 
     for core in ${cores}; do
-        for input_class in ${INPUT_CLASSES}; do
+        class_index=0
+        for input_class in ${input_classes}; do
             run=1
             while [ "${run}" -le "${RUNS}" ]; do
                 run_log="${RAW_LOG_DIR}/${safe_name}_core${core}_${input_class}_run${run}.log"
+                seed=$((BASE_SEED + class_index * 1000003 + run))
 
-                if [ "${core}" != "NA" ] && command -v taskset >/dev/null 2>&1; then
-                    taskset -c "${core}" "${exe}" "${input_class}" "${M}" "${N}" "${K}" > "${run_log}" 2>&1
+                if ! core_supports_required_path "${kind}" "${core}"; then
+                    printf 'IME hardware marker is unavailable on core %s\n' "${core}" > "${run_log}"
+                    result="PATH_UNAVAILABLE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+                    rc=0
+                elif [ "${core}" != "NA" ] && command -v taskset >/dev/null 2>&1; then
+                    taskset -c "${core}" "${exe}" "${input_class}" "${M}" "${N}" "${K}" "${seed}" > "${run_log}" 2>&1
                 else
-                    "${exe}" "${input_class}" "${M}" "${N}" "${K}" > "${run_log}" 2>&1
+                    "${exe}" "${input_class}" "${M}" "${N}" "${K}" "${seed}" > "${run_log}" 2>&1
                 fi
 
                 rc=$?
                 if [ "${rc}" -ne 0 ]; then
                     run_failed_count=$((run_failed_count + 1))
-                    result="RUN_FAILED,${rc},NA,NA,NA,NA,NA,NA,NA"
-                    log "  core ${core} ${input_class} run ${run}: RUN_FAILED"
+                    result="RUN_FAILED,${rc},NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+                    log "  core ${core} ${input_class} run ${run} seed ${seed}: RUN_FAILED"
                 else
-                    result="$(tail -n 1 "${run_log}")"
+                    if [ -z "${result:-}" ]; then
+                        result="$(tail -n 1 "${run_log}")"
+                    fi
                     status="$(printf '%s\n' "${result}" | cut -d, -f1)"
                     if [ "${status}" = "OK" ]; then
                         ok_count=$((ok_count + 1))
-                        log "  core ${core} ${input_class} run ${run}: OK"
+                        log "  core ${core} ${input_class} run ${run} seed ${seed}: OK"
                     else
                         run_failed_count=$((run_failed_count + 1))
-                        log "  core ${core} ${input_class} run ${run}: ${status}"
+                        log "  core ${core} ${input_class} run ${run} seed ${seed}: ${status}"
                     fi
                 fi
 
-                printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
-                    "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "${core}" "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
+                printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+                    "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "${core}" "${execution_path}" "${seed}" \
+                    "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
                     "${datatype}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "${input_class}" "${M}" "${N}" "${K}" "${run}" \
                     "${result}" "$(csv_quote "${run_log}")" >> "${CSV}"
 
+                unset result
                 run=$((run + 1))
             done
+            class_index=$((class_index + 1))
         done
     done
 done < <(find "${PROJECT_ROOT}" -name Makefile -print0)

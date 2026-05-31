@@ -256,6 +256,9 @@ static int rvv_fallback_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
                                   const int8_t *B,
                                   int32_t *C,
                                   BLASLONG ldc) {
+#if defined(SPACEMIT_IME_REQUIRE_HARDWARE)
+    return -99;
+#endif
     int rc = igemm_kernel_8x8_zvl128b_lmul1_unroll4_i8i32(M, N, K, alpha, (int8_t *)A, (int8_t *)B, C, ldc);
     if (rc == 0) return 0;
     return boundary_cleanup_gemm_full_prepacked(M, N, K, alpha, A, B, C, ldc);
