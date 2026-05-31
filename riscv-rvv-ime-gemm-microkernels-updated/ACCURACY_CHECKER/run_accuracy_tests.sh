@@ -29,8 +29,10 @@ CFLAGS_COMMON="${CFLAGS_COMMON:--O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas}
 RVV128_MARCH="${RVV128_MARCH:-rv64gcv_zvl128b}"
 RVV256_MARCH="${RVV256_MARCH:-rv64gcv_zvl256b}"
 BASE_SEED="${BASE_SEED:-20260531}"
-FP_INPUT_CLASSES="${FP_INPUT_CLASSES:-bounded_uniform wide_range cancellation_stress}"
-INT8_INPUT_CLASSES="${INT8_INPUT_CLASSES:-bounded_uniform full_range_uniform mixed_magnitude cancellation_stress}"
+# The default campaign is intentionally minimal: one reproducible uniform
+# experiment per datatype. Set these variables explicitly to add diagnostics.
+FP_INPUT_CLASSES="${FP_INPUT_CLASSES:-bounded_uniform}"
+INT8_INPUT_CLASSES="${INT8_INPUT_CLASSES:-full_range_uniform}"
 
 mkdir -p "${BUILD_DIR}" "${RAW_LOG_DIR}"
 : > "${LATEST_LOG}"
@@ -145,9 +147,10 @@ compile_kernel()
     local symbol="$3"
     local mr="$4"
     local nr="$5"
-    local exe="$6"
-    local build_log="$7"
-    shift 7
+    local input_contract="$6"
+    local exe="$7"
+    local build_log="$8"
+    shift 8
     local sources=("$@")
     local define_kind=""
     local extra_defines=()
@@ -159,6 +162,15 @@ compile_kernel()
         INT8_IME)
             define_kind="-DACC_KIND_INT8_IME"
             extra_defines+=("-DSPACEMIT_IME_REQUIRE_HARDWARE=1")
+            case "${input_contract}" in
+                IME_FULL_K_MAJOR)
+                    extra_defines+=("-DACC_IME_INPUT_FULL_MATRIX=1")
+                    ;;
+                IME_PREPACKED_ROWS)
+                    extra_defines+=("-DACC_IME_INPUT_PREPACKED_ROWS=1")
+                    ;;
+                *) return 1 ;;
+            esac
             ;;
         *) return 1 ;;
     esac
@@ -184,6 +196,7 @@ printf 'timestamp,mode,core,execution_path,seed,baseline,family,kernel,datatype,
 log "Accuracy checker"
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
 log "Matrix size is fixed to 1024x1024x1024 for this project."
+log "Input contracts: packed tile panels for RVV; full K-major matrices for IME 8x4; prepacked row/column panels for IME 8x8."
 log "PROJECT_ROOT=${PROJECT_ROOT}"
 log "RESULT_DIR=${RESULT_DIR}"
 log "BASE_SEED=${BASE_SEED}"
@@ -239,6 +252,7 @@ while IFS= read -r -d '' makefile; do
     nr="$(printf '%s\n' "${tile_shape}" | cut -dx -f2)"
     datatype="$(kind_label "${kind}")"
     execution_path="$(execution_path_for_kind "${kind}")"
+    input_contract="RVV_PACKED_TILE_PANELS"
     march="${RVV128_MARCH}"
 
     if [ -z "${mr}" ] || [ -z "${nr}" ]; then
@@ -247,6 +261,14 @@ while IFS= read -r -d '' makefile; do
 
     if printf '%s\n' "${kernel}" | grep -q 'zvl256b'; then
         march="${RVV256_MARCH}"
+    fi
+
+    if [ "${kind}" = "INT8_IME" ]; then
+        case "${tile_shape}" in
+            8x4) input_contract="IME_FULL_K_MAJOR" ;;
+            8x8) input_contract="IME_PREPACKED_ROWS" ;;
+            *) continue ;;
+        esac
     fi
 
     safe_name="${baseline}_${family}_${kernel}"
@@ -262,8 +284,9 @@ while IFS= read -r -d '' makefile; do
     log "KERNEL=${kernel}"
     log "FAMILY=${family}"
     log "KIND=${kind}"
+    log "INPUT_CONTRACT=${input_contract}"
 
-    if ! compile_kernel "${kind}" "${march}" "${symbol}" "${mr}" "${nr}" "${exe}" "${build_log}" "${sources[@]}"; then
+    if ! compile_kernel "${kind}" "${march}" "${symbol}" "${mr}" "${nr}" "${input_contract}" "${exe}" "${build_log}" "${sources[@]}"; then
         build_failed_count=$((build_failed_count + 1))
         log "BUILD_FAILED: ${build_log}"
         printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \

@@ -1,13 +1,13 @@
 # GEMM Microkernel Accuracy Checker
 
-This folder validates the numerical correctness of the project's packed RVV
-and IME GEMM microkernels. It is intentionally separate from the performance
-benchmark scripts.
+This folder validates the numerical correctness of the project's RVV
+microkernels and IME GEMM wrappers. It is intentionally separate from the
+performance benchmark scripts.
 
 ## Scope
 
-The checker validates each packed `8x4` or `8x8` microkernel against an
-independent reference calculation generated from the same input panels.
+The checker validates each `8x4` or `8x8` callable against an independent
+reference calculation generated from the same input matrices.
 
 It covers:
 
@@ -16,8 +16,11 @@ It covers:
 - RVV IGEMM: signed INT8 input and INT32 output.
 - IME VMADOT IGEMM: signed INT8 input and INT32 output.
 
-This is microkernel-level validation. It does not validate an external
-row-major packing pipeline.
+RVV microkernels receive packed tile panels. IME `8x4` wrappers receive full
+K-major matrices and pack their IME tiles internally. IME `8x8` wrappers
+receive prepacked row/column panels and split each `8x8` output tile into two
+`8x4` VMADOT blocks. The checker preserves the expected input contract for
+each path.
 
 ## Matrix Size and Seeds
 
@@ -31,27 +34,40 @@ The driver records a deterministic seed for every run. Repeating the checker
 with the same seed reproduces the same generated matrices. Increasing `RUNS`
 tests additional reproducible matrices rather than repeating one matrix.
 
-## Input Classes
+## Minimum Accuracy Method
 
-Floating-point kernels use:
+The default campaign uses one deterministic uniformly distributed input class
+per datatype. This follows the uniformly random experiment structure described
+by Parikh et al. in Section 5.2 of
+[Cascading GEMM: High Precision from Low Precision](https://arxiv.org/pdf/2303.04353),
+with an INT8 adaptation for the RVV and IME kernels in this project.
 
-| Class | Purpose |
+| Kernels | Default class | Input values | Reference |
+| --- | --- | --- | --- |
+| RVV SGEMM FP32 | `bounded_uniform` | Uniform FP32 values in `[-1, 1)` | FP64 accumulation |
+| RVV DGEMM FP64 | `bounded_uniform` | Uniform FP64 values in `[-1, 1)` | `long double` accumulation |
+| RVV IGEMM INT8 | `full_range_uniform` | Uniform signed INT8 values in `[-128, 127]` | Wider integer accumulation |
+| IME VMADOT IGEMM INT8 | `full_range_uniform` | Uniform signed INT8 values in `[-128, 127]` | Wider integer accumulation |
+
+The paper evaluates floating-point cascading GEMM. The signed INT8 method is
+therefore an adaptation, not an exact reproduction of the paper.
+
+## Optional Diagnostic Classes
+
+Additional classes are available for debugging and supplementary experiments.
+They do not run unless explicitly selected.
+
+| Datatype | Optional classes |
 | --- | --- |
-| `bounded_uniform` | Baseline values sampled uniformly from `[-1, 1)` |
-| `wide_range` | Random signs, mantissas, and binary exponents from `-20` to `20` |
-| `cancellation_stress` | Neighboring K terms almost cancel, leaving a small nonzero result |
+| FP32 and FP64 | `wide_range cancellation_stress` |
+| INT8 | `bounded_uniform mixed_magnitude cancellation_stress` |
 
-INT8 kernels use:
+For example, run the complete INT8 diagnostic set on K1 IME cores:
 
-| Class | Purpose |
-| --- | --- |
-| `bounded_uniform` | Baseline values sampled uniformly from `[-16, 16]` |
-| `full_range_uniform` | Full signed INT8 range `[-128, 127]` |
-| `mixed_magnitude` | Mostly small values with occasional full-range values |
-| `cancellation_stress` | Neighboring K terms cancel except for a one-unit final perturbation |
-
-The class names describe this project's tests. They are informed by GEMM
-accuracy-testing practice but are not an exact reproduction of another paper.
+```bash
+INT8_INPUT_CLASSES="bounded_uniform full_range_uniform mixed_magnitude cancellation_stress" \
+    bash ACCURACY_CHECKER/run_accuracy_tests.sh k1-ime 1
+```
 
 ## Pass and Fail Rules
 

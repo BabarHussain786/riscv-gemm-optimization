@@ -45,6 +45,15 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 #error "One ACC_KIND_* macro must be defined"
 #endif
 
+#if defined(ACC_KIND_INT8_IME)
+#if !defined(ACC_IME_INPUT_FULL_MATRIX) && !defined(ACC_IME_INPUT_PREPACKED_ROWS)
+#error "IME accuracy builds must define one ACC_IME_INPUT_* contract"
+#endif
+#if defined(ACC_IME_INPUT_FULL_MATRIX) && defined(ACC_IME_INPUT_PREPACKED_ROWS)
+#error "Define only one ACC_IME_INPUT_* contract"
+#endif
+#endif
+
 static uint64_t rng_state;
 
 static uint32_t next_u32(void)
@@ -278,6 +287,10 @@ static int run_fp(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K)
         return 1;
     }
 
+    memset(C, 0, size_c * sizeof(*C));
+    memset(Cref, 0, size_c * sizeof(*Cref));
+    memset(Cscale, 0, size_c * sizeof(*Cscale));
+
     fill_fp_inputs(A, B, M, N, K, input_class);
     reference_fp(M, N, K, (GEMM_T)1, A, B, Cref, Cscale, M);
 
@@ -390,8 +403,9 @@ static void fill_i8_flat(int8_t *x, size_t count, const char *input_class)
  * Each neighboring K pair cancels, except for a one-unit perturbation in
  * the final B pair. The expected result is deliberately small and nonzero.
  */
-static void fill_i8_cancellation(int8_t *x, BLASLONG outer, BLASLONG K,
-                                 BLASLONG full_tile, int is_a)
+#if !defined(ACC_KIND_INT8_IME)
+static void fill_i8_cancellation_packed(int8_t *x, BLASLONG outer, BLASLONG K,
+                                        BLASLONG full_tile, int is_a)
 {
     BLASLONG top = 0;
 
@@ -424,12 +438,78 @@ static void fill_i8_cancellation(int8_t *x, BLASLONG outer, BLASLONG K,
     }
 }
 
+#elif defined(ACC_IME_INPUT_FULL_MATRIX)
+/*
+ * IME 8x4 wrappers receive full K-major matrices and pack their tiles
+ * internally. Preserve that contract for the cancellation input class.
+ */
+static void fill_i8_cancellation_full_matrix(int8_t *x, BLASLONG outer,
+                                             BLASLONG K, int is_a)
+{
+    for (BLASLONG k = 0; k + 1 < K; k += 2) {
+        for (BLASLONG lane = 0; lane < outer; ++lane) {
+            int value = sign_value() * uniform_int_range(1, 16);
+            int paired = is_a ? value : -value;
+
+            if (!is_a && k + 2 == K) {
+                paired += paired < 0 ? 1 : -1;
+            }
+
+            x[(size_t)k * (size_t)outer + (size_t)lane] = (int8_t)value;
+            x[(size_t)(k + 1) * (size_t)outer + (size_t)lane] = (int8_t)paired;
+        }
+    }
+
+    if (K & 1) {
+        for (BLASLONG lane = 0; lane < outer; ++lane) {
+            x[(size_t)(K - 1) * (size_t)outer + (size_t)lane] =
+                int8_random_value("bounded_uniform");
+        }
+    }
+}
+#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
+/*
+ * IME 8x8 wrappers receive panels indexed as lane*K+k. A lanes are rows and
+ * B lanes are columns. Preserve that contract for the cancellation class.
+ */
+static void fill_i8_cancellation_prepacked_rows(int8_t *x, BLASLONG outer,
+                                                BLASLONG K, int is_a)
+{
+    for (BLASLONG lane = 0; lane < outer; ++lane) {
+        for (BLASLONG k = 0; k + 1 < K; k += 2) {
+            int value = sign_value() * uniform_int_range(1, 16);
+            int paired = is_a ? value : -value;
+
+            if (!is_a && k + 2 == K) {
+                paired += paired < 0 ? 1 : -1;
+            }
+
+            x[(size_t)lane * (size_t)K + (size_t)k] = (int8_t)value;
+            x[(size_t)lane * (size_t)K + (size_t)(k + 1)] = (int8_t)paired;
+        }
+
+        if (K & 1) {
+            x[(size_t)lane * (size_t)K + (size_t)(K - 1)] =
+                int8_random_value("bounded_uniform");
+        }
+    }
+}
+#endif
+
 static void fill_i8_inputs(int8_t *A, int8_t *B, BLASLONG M, BLASLONG N,
                            BLASLONG K, const char *input_class)
 {
     if (strcmp(input_class, "cancellation_stress") == 0) {
-        fill_i8_cancellation(A, M, K, ACC_MR, 1);
-        fill_i8_cancellation(B, N, K, ACC_NR, 0);
+#if defined(ACC_IME_INPUT_FULL_MATRIX)
+        fill_i8_cancellation_full_matrix(A, M, K, 1);
+        fill_i8_cancellation_full_matrix(B, N, K, 0);
+#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
+        fill_i8_cancellation_prepacked_rows(A, M, K, 1);
+        fill_i8_cancellation_prepacked_rows(B, N, K, 0);
+#else
+        fill_i8_cancellation_packed(A, M, K, ACC_MR, 1);
+        fill_i8_cancellation_packed(B, N, K, ACC_NR, 0);
+#endif
         return;
     }
 
@@ -456,16 +536,26 @@ static void reference_i32(BLASLONG M, BLASLONG N, BLASLONG K,
 
         while (m_top < M) {
             BLASLONG rows = tile_step(M - m_top, ACC_MR);
+#if !defined(ACC_KIND_INT8_IME)
             const int8_t *Ablk = &A[(size_t)m_top * (size_t)K];
             const int8_t *Bblk = &B[(size_t)n_top * (size_t)K];
+#endif
 
             for (BLASLONG c = 0; c < cols; ++c) {
                 for (BLASLONG r = 0; r < rows; ++r) {
                     int64_t sum = 0;
 
                     for (BLASLONG k = 0; k < K; ++k) {
+#if defined(ACC_IME_INPUT_FULL_MATRIX)
+                        sum += (int64_t)A[(size_t)k * (size_t)M + (size_t)(m_top + r)] *
+                               (int64_t)B[(size_t)k * (size_t)N + (size_t)(n_top + c)];
+#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
+                        sum += (int64_t)A[(size_t)(m_top + r) * (size_t)K + (size_t)k] *
+                               (int64_t)B[(size_t)(n_top + c) * (size_t)K + (size_t)k];
+#else
                         sum += (int64_t)Ablk[(size_t)k * (size_t)rows + (size_t)r] *
                                (int64_t)Bblk[(size_t)k * (size_t)cols + (size_t)c];
+#endif
                     }
 
                     sum *= (int64_t)alpha;
@@ -504,6 +594,9 @@ static int run_i32(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K)
         fprintf(stderr, "allocation failed\n");
         return 1;
     }
+
+    memset(C, 0, size_c * sizeof(*C));
+    memset(Cref, 0, size_c * sizeof(*Cref));
 
     fill_i8_inputs(A, B, M, N, K, input_class);
 
