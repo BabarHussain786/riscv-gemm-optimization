@@ -30,17 +30,29 @@ Every run uses the project matrix size:
 M = 1024, N = 1024, K = 1024
 ```
 
-The driver records a deterministic seed for every run. Repeating the checker
-with the same seed reproduces the same generated matrices. Increasing `RUNS`
-tests additional reproducible matrices rather than repeating one matrix.
+The driver records the pseudorandom-generator seed for every run. The default
+base seed is `0`, and the first dataset uses seed `1`. For a single input
+class, increasing `RUNS` produces seeds `1, 2, 3, ...`.
 
-## Minimum Accuracy Method
+The seed is not a hardware parameter or a mathematical constant. It is
+recorded so that every microkernel receives the same generated matrices and
+the experiment can be reproduced exactly. A different documented base seed
+can be selected with `BASE_SEED`.
 
-The default campaign uses one deterministic uniformly distributed input class
-per datatype. This follows the uniformly random experiment structure described
-by Parikh et al. in Section 5.2 of
+## Methodology Boundary
+
+The floating-point campaigns are inspired by the uniformly random experiment
+structure described by Parikh et al. in Section 5.2 of
 [Cascading GEMM: High Precision from Low Precision](https://arxiv.org/pdf/2303.04353),
-with an INT8 adaptation for the RVV and IME kernels in this project.
+but they are not an exact reproduction of that paper. The paper evaluates
+floating-point cascading GEMM and uses a higher-precision experimental
+reference. This project evaluates RVV microkernels and IME VMADOT wrappers.
+
+The INT8 campaigns use a project-specific exact correctness test. Every INT8
+output element is compared against an independent wider-integer reference
+calculated from the same signed INT8 matrices.
+
+## Default Accuracy Campaign
 
 | Kernels | Default class | Input values | Reference |
 | --- | --- | --- | --- |
@@ -48,9 +60,6 @@ with an INT8 adaptation for the RVV and IME kernels in this project.
 | RVV DGEMM FP64 | `bounded_uniform` | Uniform FP64 values in `[-1, 1)` | `long double` accumulation |
 | RVV IGEMM INT8 | `full_range_uniform` | Uniform signed INT8 values in `[-128, 127]` | Wider integer accumulation |
 | IME VMADOT IGEMM INT8 | `full_range_uniform` | Uniform signed INT8 values in `[-128, 127]` | Wider integer accumulation |
-
-The paper evaluates floating-point cascading GEMM. The signed INT8 method is
-therefore an adaptation, not an exact reproduction of the paper.
 
 ## Optional Diagnostic Classes
 
@@ -113,7 +122,9 @@ Normal benchmark builds remain self-contained and retain their RVV fallback.
 
 ## Commands
 
-Run from the project root.
+Run from the project root. The runner intentionally requires one explicit
+board mode. It does not provide an unpinned `all` mode, because K1 and K3 have
+different RVV and IME core mappings.
 
 K1 RVV kernels on cores `0-7`:
 
@@ -139,19 +150,36 @@ K3 IME VMADOT kernels on cores `8-15`:
 bash ACCURACY_CHECKER/run_accuracy_tests.sh k3-ime 1
 ```
 
-For a final accuracy campaign, use more than one reproducible input set:
+For a final accuracy campaign, use more than one reproducible input set. For
+example, this checks three INT8 IME matrix pairs using seeds `1`, `2`, and `3`:
 
 ```bash
-bash ACCURACY_CHECKER/run_accuracy_tests.sh k1-rvv 3
+bash ACCURACY_CHECKER/run_accuracy_tests.sh k1-ime 3
 ```
 
 ## Output
 
-The latest summary is written to:
+Each board mode preserves its own latest summary. For example:
 
 ```text
-ACCURACY_CHECKER/accuracy_summary_latest.csv
+ACCURACY_CHECKER/accuracy_summary_k1_rvv_latest.csv
+ACCURACY_CHECKER/accuracy_summary_k1_ime_latest.csv
+ACCURACY_CHECKER/accuracy_summary_k3_rvv_latest.csv
+ACCURACY_CHECKER/accuracy_summary_k3_ime_latest.csv
 ```
 
-Each row includes the core, execution path, seed, input class, matrix size,
-kernel metadata, numerical metrics, status, and raw log path.
+Each CSV row includes the core, execution path, input contract, reference
+method, generator seed, input class, matrix size, kernel metadata, numerical
+metrics, status, and raw log path. A build failure uses `core=NOT_RUN` rather
+than an ambiguous `core=NA`.
+
+The `status` column is interpreted as follows:
+
+| Status | Meaning |
+| --- | --- |
+| `OK` | The kernel ran and satisfied the numerical pass rule. |
+| `NUMERICAL_FAILED` | The kernel ran, but its output did not satisfy the numerical pass rule. |
+| `KERNEL_RETURN` | The executable returned a non-zero status, for example when the required IME path is unavailable. |
+| `PATH_UNAVAILABLE` | The requested RVV or IME core path could not be selected on the board. |
+| `BUILD_FAILED` | The checker could not compile the selected kernel. |
+| `RUN_FAILED` | The compiled checker could not be executed successfully. |

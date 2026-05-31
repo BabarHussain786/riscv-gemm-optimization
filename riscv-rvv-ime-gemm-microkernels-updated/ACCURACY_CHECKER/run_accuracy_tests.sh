@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
 set -u
 
-MODE="${1:-all}"
+MODE="${1:-}"
 M=1024
 N=1024
 K=1024
-
-if [ "$#" -ge 5 ]; then
-    RUNS="${5:-1}"
-else
-    RUNS="${2:-1}"
-fi
+RUNS="${2:-1}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -20,19 +15,47 @@ RESULT_DIR="${SCRIPT_DIR}/accuracy_results_${MODE}_${M}_${STAMP}"
 BUILD_DIR="${RESULT_DIR}/build"
 RAW_LOG_DIR="${RESULT_DIR}/raw_logs"
 CSV="${RESULT_DIR}/accuracy_summary_${MODE}_${M}_${STAMP}.csv"
-LATEST_CSV="${SCRIPT_DIR}/accuracy_summary_latest.csv"
-LATEST_LOG="${SCRIPT_DIR}/accuracy_live_latest.log"
+LATEST_CSV="${SCRIPT_DIR}/accuracy_summary_${MODE}_latest.csv"
+LATEST_LOG="${SCRIPT_DIR}/accuracy_live_${MODE}_latest.log"
 
 CC="${CC:-gcc}"
 ABI="${ABI:-lp64d}"
 CFLAGS_COMMON="${CFLAGS_COMMON:--O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas}"
 RVV128_MARCH="${RVV128_MARCH:-rv64gcv_zvl128b}"
 RVV256_MARCH="${RVV256_MARCH:-rv64gcv_zvl256b}"
-BASE_SEED="${BASE_SEED:-20260531}"
+BASE_SEED="${BASE_SEED:-0}"
 # The default campaign is intentionally minimal: one reproducible uniform
 # experiment per datatype. Set these variables explicitly to add diagnostics.
 FP_INPUT_CLASSES="${FP_INPUT_CLASSES:-bounded_uniform}"
 INT8_INPUT_CLASSES="${INT8_INPUT_CLASSES:-full_range_uniform}"
+
+usage()
+{
+    cat <<'EOF'
+Usage: bash ACCURACY_CHECKER/run_accuracy_tests.sh MODE [RUNS]
+
+MODE must be one of:
+  k1-rvv  K1 RVV kernels on cores 0-7
+  k1-ime  K1 IME VMADOT kernels on cores 0-3
+  k3-rvv  K3 RVV kernels on cores 0-7
+  k3-ime  K3 IME VMADOT kernels on cores 8-15
+EOF
+}
+
+case "${MODE}" in
+    k1-rvv|k1-ime|k3-rvv|k3-ime) ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+
+case "${RUNS}" in
+    ''|*[!0-9]*|0)
+        printf 'RUNS must be a positive integer.\n' >&2
+        exit 2
+        ;;
+esac
 
 mkdir -p "${BUILD_DIR}" "${RAW_LOG_DIR}"
 : > "${LATEST_LOG}"
@@ -75,12 +98,10 @@ include_kind_in_mode()
     local kind="$1"
 
     case "${MODE}:${kind}" in
-        all:*) return 0 ;;
         k1-rvv:FP32_RVV|k1-rvv:FP64_RVV|k1-rvv:INT8_RVV) return 0 ;;
         k1-ime:INT8_IME) return 0 ;;
         k3-rvv:FP32_RVV|k3-rvv:FP64_RVV|k3-rvv:INT8_RVV) return 0 ;;
         k3-ime:INT8_IME) return 0 ;;
-        local:*) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -93,7 +114,7 @@ core_list_for_kind()
         k1-rvv:*|k3-rvv:*) printf '0 1 2 3 4 5 6 7' ;;
         k1-ime:*) printf '0 1 2 3' ;;
         k3-ime:*) printf '8 9 10 11 12 13 14 15' ;;
-        *) printf 'NA' ;;
+        *) return 1 ;;
     esac
 }
 
@@ -115,12 +136,22 @@ execution_path_for_kind()
     esac
 }
 
+reference_method_for_kind()
+{
+    case "$1" in
+        FP32_RVV) printf 'FP64_ACCUMULATION_REFERENCE' ;;
+        FP64_RVV) printf 'LONG_DOUBLE_ACCUMULATION_REFERENCE' ;;
+        INT8_RVV|INT8_IME) printf 'INT64_REFERENCE_EXACT_INT32_OUTPUT' ;;
+        *) printf 'UNKNOWN' ;;
+    esac
+}
+
 core_supports_required_path()
 {
     local kind="$1"
     local core="$2"
 
-    if [ "${kind}" != "INT8_IME" ] || [ "${core}" = "NA" ]; then
+    if [ "${kind}" != "INT8_IME" ]; then
         return 0
     fi
 
@@ -191,7 +222,7 @@ kind_label()
     esac
 }
 
-printf 'timestamp,mode,core,execution_path,seed,baseline,family,kernel,datatype,tile_shape,zvl,lmul,unroll,input_class,M,N,K,run,status,return_code,max_abs_error,mean_abs_error,max_rel_error,mean_rel_error,frobenius_relative_error,max_bound_ratio,bound_failure_count,nonfinite_count,mismatch_count,max_integer_difference,overflow_count,log_file\n' > "${CSV}"
+printf 'timestamp,mode,core,execution_path,input_contract,reference_method,generator_seed,baseline,family,kernel,datatype,tile_shape,zvl,lmul,unroll,input_class,matrix_m,matrix_n,matrix_k,run_index,status,return_code,max_abs_error,mean_abs_error,max_rel_error,mean_rel_error,frobenius_relative_error,max_bound_ratio,bound_failure_count,nonfinite_count,mismatch_count,max_integer_difference,overflow_count,log_file\n' > "${CSV}"
 
 log "Accuracy checker"
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
@@ -200,6 +231,8 @@ log "Input contracts: packed tile panels for RVV; full K-major matrices for IME 
 log "PROJECT_ROOT=${PROJECT_ROOT}"
 log "RESULT_DIR=${RESULT_DIR}"
 log "BASE_SEED=${BASE_SEED}"
+log "Seed rule: generator_seed = BASE_SEED + input_class_index * RUNS + run_index."
+log "Default single-class run uses seed 1. The seed is recorded for reproducibility; it is not a hardware parameter."
 log "FP_INPUT_CLASSES=${FP_INPUT_CLASSES}"
 log "INT8_INPUT_CLASSES=${INT8_INPUT_CLASSES}"
 grep Cpus_allowed_list /proc/self/status 2>/dev/null | tee -a "${LATEST_LOG}" || true
@@ -252,6 +285,7 @@ while IFS= read -r -d '' makefile; do
     nr="$(printf '%s\n' "${tile_shape}" | cut -dx -f2)"
     datatype="$(kind_label "${kind}")"
     execution_path="$(execution_path_for_kind "${kind}")"
+    reference_method="$(reference_method_for_kind "${kind}")"
     input_contract="RVV_PACKED_TILE_PANELS"
     march="${RVV128_MARCH}"
 
@@ -285,14 +319,15 @@ while IFS= read -r -d '' makefile; do
     log "FAMILY=${family}"
     log "KIND=${kind}"
     log "INPUT_CONTRACT=${input_contract}"
+    log "REFERENCE_METHOD=${reference_method}"
 
     if ! compile_kernel "${kind}" "${march}" "${symbol}" "${mr}" "${nr}" "${input_contract}" "${exe}" "${build_log}" "${sources[@]}"; then
         build_failed_count=$((build_failed_count + 1))
         log "BUILD_FAILED: ${build_log}"
-        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
-            "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "NA" "${execution_path}" "NA" \
+        printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+            "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "NOT_RUN" "${execution_path}" "${input_contract}" "${reference_method}" "NOT_RUN" \
             "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
-            "${datatype}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "NA" "${M}" "${N}" "${K}" "0" \
+            "${datatype}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "NOT_RUN" "${M}" "${N}" "${K}" "0" \
             "BUILD_FAILED" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "NA" "$(csv_quote "${build_log}")" >> "${CSV}"
         continue
     fi
@@ -308,13 +343,13 @@ while IFS= read -r -d '' makefile; do
             run=1
             while [ "${run}" -le "${RUNS}" ]; do
                 run_log="${RAW_LOG_DIR}/${safe_name}_core${core}_${input_class}_run${run}.log"
-                seed=$((BASE_SEED + class_index * 1000003 + run))
+                seed=$((BASE_SEED + class_index * RUNS + run))
 
                 if ! core_supports_required_path "${kind}" "${core}"; then
                     printf 'IME hardware marker is unavailable on core %s\n' "${core}" > "${run_log}"
                     result="PATH_UNAVAILABLE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
                     rc=0
-                elif [ "${core}" != "NA" ] && command -v taskset >/dev/null 2>&1; then
+                elif command -v taskset >/dev/null 2>&1; then
                     taskset -c "${core}" "${exe}" "${input_class}" "${M}" "${N}" "${K}" "${seed}" > "${run_log}" 2>&1
                 else
                     "${exe}" "${input_class}" "${M}" "${N}" "${K}" "${seed}" > "${run_log}" 2>&1
@@ -339,8 +374,8 @@ while IFS= read -r -d '' makefile; do
                     fi
                 fi
 
-                printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
-                    "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "${core}" "${execution_path}" "${seed}" \
+                printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+                    "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "${core}" "${execution_path}" "${input_contract}" "${reference_method}" "${seed}" \
                     "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
                     "${datatype}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "${input_class}" "${M}" "${N}" "${K}" "${run}" \
                     "${result}" "$(csv_quote "${run_log}")" >> "${CSV}"
