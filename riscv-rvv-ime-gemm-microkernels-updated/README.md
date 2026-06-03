@@ -1,19 +1,38 @@
 # RISC-V RVV and SpacemiT IME GEMM Microkernels
 
-This repository contains a curated set of RISC-V GEMM microkernels for evaluating RVV vector execution and SpacemiT IME acceleration across FP32, FP64, and INT8 workloads. The project is organized for reproducible single-core benchmarking on K1 and K3 boards, with kernel variants separated by datatype, tile shape, vector length setting, LMUL label, and unroll factor.
+This repository contains RISC-V GEMM microkernels for reproducible RVV and
+SpacemiT IME experiments on K1 and K3 boards. It is part of PhD research at
+the Department of Computer Science, University of Salerno.
 
-The work is part of PhD research at the Department of Computer Science, University of Salerno.
+## Workloads
 
-## Scope
-
-| Family | Operation | Output | Tile Shapes | Backend |
-|---|---:|---:|---:|---|
+| Family | Operation | Output | Software tiles | Backend |
+| --- | --- | --- | --- | --- |
 | FP32 SGEMM | FP32 x FP32 | FP32 | 8x4, 8x8 | RVV |
 | FP64 DGEMM | FP64 x FP64 | FP64 | 8x4, 8x8 | RVV |
 | INT8 IGEMM | INT8 x INT8 | INT32 | 8x4, 8x8 | RVV |
-| IME INT8 GEMM | INT8 x INT8 | INT32 | 8x4, 8x8 | SpacemiT IME with local RVV fallback |
+| Native IME | INT8 x INT8 | INT32 | 8x4, 8x8 | SpacemiT VMADOT |
 
-## Repository Layout
+## Native IME Sources
+
+The current IME implementations remain in two shared families. Each source
+detects the active hardware profile internally: K1/A60 uses native `4x8x4`
+VMADOT tiles and K3/A100 uses native `8x16x8` VMADOT tiles. The public folder
+layout stays compact while each board executes its correct private packing and
+write-back path.
+
+Each native family contains the original `zvl128b` and `zvl256b`, `lmul1` and
+`lmulmf2`, and unroll `1`, `2`, `4`, and `8` variants. The public SpacemiT
+documentation describes `LMUL=1`; therefore, `lmulmf2` rows are retained only
+as explicit experimental target-board measurements. Default benchmarks skip
+them. Enable them only after a board-specific capability check:
+
+```bash
+ENABLE_EXPERIMENTAL_MF2=1 bash run_k1_01_rvv_ime_0_7_1024.sh
+ENABLE_EXPERIMENTAL_MF2=1 bash run_k3_rvv_ime_0_15_1024.sh
+```
+
+## Layout
 
 ```text
 riscv-rvv-ime-gemm-microkernels/
@@ -21,145 +40,73 @@ riscv-rvv-ime-gemm-microkernels/
 +-- GEMM_RVV_FP32_INT8_IME_8x8_Baseline/
 +-- GEMM_RVV_FP64_INT8_IME_8x4_Baseline/
 +-- GEMM_RVV_FP64_INT8_IME_8x8_Baseline/
-+-- run_k1_single_core_0_7_1024.sh
++-- IME_NATIVE_KERNELS/
+|   +-- IME_GEMM_INT8_I8I32_8x4_NATIVE/
+|   +-- IME_GEMM_INT8_I8I32_8x8_NATIVE/
++-- ACCURACY_CHECKER/
++-- OPENMP_TILED_GEMM_ALL_KERNELS/
++-- run_k1_01_rvv_ime_0_7_1024.sh
 +-- run_k3_rvv_ime_0_15_1024.sh
-+-- README.md
-+-- LICENSE
 ```
 
-Each baseline directory contains three kernel families:
+Each native IME variant is self-contained: its directory contains the native
+IME source, `rvv_fallback.c`, `ime_bench.c`, and a `Makefile`. The RVV
+fallback is available for normal execution. Accuracy builds disable fallback
+execution so that a successful IME row proves that VMADOT executed.
 
-```text
-RVV_SGEMM_FP32_*              FP32 RVV kernels
-RVV_DGEMM_FP64_*              FP64 RVV kernels
-RVV_IGEMM_INT8_I8I32_*        INT8 RVV kernels
-IME_GEMM_INT8_I8I32_*_RVV_Fallback
-                              IME kernels with self-contained RVV fallback
-```
+All IME wrappers receive the same full K-major caller layout:
+`A[k*M+row]`, `B[k*N+column]`, and column-major `C[column*ldc+row]`.
 
-Each individual kernel variant folder contains its source file, benchmark driver, and Makefile. IME folders additionally include `rvv_fallback.c`, so the IME folder can be built without depending on the standalone INT8 RVV tree.
+## Full Single-Core Benchmarks
 
-## Kernel Variant Naming
-
-Kernel folders follow a fixed naming convention:
-
-```text
-<family>_kernel_<tile>_zvl<VLEN>b_lmul<LMUL>_unroll<UNROLL>
-```
-
-Examples:
-
-```text
-sgemm_kernel_8x4_zvl256b_lmul4_unroll8
-igemm_kernel_8x8_zvl128b_lmulmf4_unroll2
-ime_kernel_8x4_zvl256b_lmul1_unroll4
-```
-
-The name records the micro-tile shape, RVV vector-length target, LMUL label, and loop unroll factor used by the implementation.
-
-## Build One Kernel
-
-Run these commands on the RISC-V target board:
+K1 uses RVV cores `0-7` and native IME cores `0-3`:
 
 ```bash
-cd ~/riscv-rvv-ime-gemm-microkernels/GEMM_RVV_FP32_INT8_IME_8x4_Baseline/RVV_SGEMM_FP32_8x4/sgemm_kernel_8x4_zvl256b_lmul1_unroll1
-make clean && make
-./bench 1024 1024 1024
+bash run_k1_01_rvv_ime_0_7_1024.sh
 ```
 
-For an IME kernel on K3, run the benchmark from an IME-enabled CPU domain:
+K3 uses RVV cores `0-7` and the A100 IME domain on cores `8-15`:
 
 ```bash
-cd ~/riscv-rvv-ime-gemm-microkernels/GEMM_RVV_FP64_INT8_IME_8x4_Baseline/IME_GEMM_INT8_I8I32_8x4_RVV_Fallback/ime_kernel_8x4_zvl128b_lmul1_unroll1
-make clean && make
-bash -lc 'echo $$ > /proc/set_ai_thread && taskset -c 8 ./bench 1024 1024 1024'
-```
-
-## Full Benchmark Campaigns
-
-### K1: RVV single-core campaign
-
-```bash
-cd ~/riscv-rvv-ime-gemm-microkernels
-bash run_k1_single_core_0_7_1024.sh
-```
-
-Default settings:
-
-```text
-M=N=K=1024
-RUNS=6
-CORES=0 1 2 3 4 5 6 7
-```
-
-### K3: RVV plus IME campaign
-
-```bash
-cd ~/riscv-rvv-ime-gemm-microkernels
 bash run_k3_rvv_ime_0_15_1024.sh
 ```
 
-Default core domains:
+The K3 launcher uses `/proc/set_ai_thread` before pinning A100 runs when the
+Bianbu kernel exposes that interface.
 
-```text
-RVV cores: 0 1 2 3 4 5 6 7
-IME cores: 8 9 10 11 12 13 14 15
-```
+## Accuracy
 
-The K3 script uses `/proc/set_ai_thread` when available before pinning IME runs to cores 8-15. This is required on Bianbu K3 systems where IME-capable A100 cores are exposed through a separate CPU domain.
-
-## Optional Benchmark Parameters
+Run each board path explicitly:
 
 ```bash
-M=512 N=512 K=512 RUNS=10 bash run_k1_single_core_0_7_1024.sh
+bash ACCURACY_CHECKER/run_accuracy_tests.sh k1-rvv 1
+bash ACCURACY_CHECKER/run_accuracy_tests.sh k1-ime 1
+bash ACCURACY_CHECKER/run_accuracy_tests.sh k3-rvv 1
+bash ACCURACY_CHECKER/run_accuracy_tests.sh k3-ime 1
 ```
+
+INT8 validation compares every INT32 result element against a wider-integer
+reference computed from the same full-range signed INT8 matrices. Read
+`ACCURACY_CHECKER/README.md` for the complete method and CSV fields.
+
+## OpenMP Tiled Extension
+
+The optional OpenMP extension evaluates matrix-level parallel execution after
+single-core validation:
 
 ```bash
-M=1024 N=1024 K=1024 RUNS=6 \
-RVV_CORES="0 1 2 3 4 5 6 7" \
-IME_CORES="8 9 10 11 12 13 14 15" \
-bash run_k3_rvv_ime_0_15_1024.sh
+OMP_NUM_THREADS=4 bash OPENMP_TILED_GEMM_ALL_KERNELS/run_all_openmp_kernels.sh k1-ime
+OMP_NUM_THREADS=8 bash OPENMP_TILED_GEMM_ALL_KERNELS/run_all_openmp_kernels.sh k3-ime
 ```
-
-## Output Files
-
-K1 campaigns write per-baseline results under each baseline directory:
-
-```text
-single_core_results_<M>/
-+-- single_core_raw_latest.csv
-+-- single_core_summary_latest.csv
-+-- single_core_live_*.log
-+-- raw_logs/
-```
-
-K3 campaigns write combined results at the project root:
-
-```text
-k3_rvv_ime_results_<M>/
-+-- k3_rvv_ime_raw_latest.csv
-+-- k3_rvv_ime_summary_latest.csv
-+-- k3_rvv_ime_live_latest.log
-+-- raw_logs/
-```
-
-Use the summary CSV files for plots and tables. Use raw CSV files when per-run statistics or debugging are needed.
 
 ## Requirements
 
-- RISC-V Linux target with RVV support.
-- GCC or compatible C compiler with RVV intrinsic support.
-- GNU Make and Bash.
-- `taskset` from util-linux for core pinning.
-- SpacemiT K3 with IME-capable cores for IME hardware runs.
+- RISC-V Linux with RVV support.
+- GCC with RVV intrinsic support.
+- GNU Make, Bash, and `taskset`.
+- IME-capable SpacemiT cores for native IME execution.
 
-## Notes For Reproducibility
+## Research Notice
 
-- The benchmark driver reports `GFLOPS` for FP32/FP64 and `GOPS` for INT8/IME.
-- Each result row records successful runs, failed runs, build failures, and nonzero kernel return counts.
-- For publication plots, filter to rows with successful runs and zero failure counters.
-- IME kernels include a local RVV fallback implementation inside each IME variant folder.
-
-## License And Research Notice
-
-This project is maintained for research work at the University of Salerno, Department of Computer Science. See `LICENSE` for the repository notice.
+This repository is maintained for research work at the University of
+Salerno, Department of Computer Science. See `LICENSE`.

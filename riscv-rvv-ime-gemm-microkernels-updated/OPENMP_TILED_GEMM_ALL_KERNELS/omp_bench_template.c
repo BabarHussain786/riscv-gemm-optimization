@@ -42,6 +42,15 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 #error "Define one OMP_KIND_* macro"
 #endif
 
+#if defined(OMP_KIND_INT8_IME)
+#if !defined(OMP_IME_INPUT_FULL_MATRIX) && !defined(OMP_IME_INPUT_PREPACKED_ROWS)
+#error "Native IME OpenMP builds require one documented input contract"
+#endif
+#if defined(OMP_IME_INPUT_FULL_MATRIX) && defined(OMP_IME_INPUT_PREPACKED_ROWS)
+#error "Define only one native IME input contract"
+#endif
+#endif
+
 static double now_sec(void)
 {
     struct timespec ts;
@@ -159,9 +168,30 @@ int main(int argc, char **argv)
 #elif defined(OMP_KIND_INT8_RVV)
         rc = KERNEL_SYMBOL(M, nb, K, 1,
                            A, B + n0 * K, C + n0 * M, M);
-#else
+#elif defined(OMP_KIND_INT8_IME)
+#if defined(OMP_IME_INPUT_FULL_MATRIX)
+        GEMM_I8 *B_tile = (GEMM_I8 *)aligned_bytes((size_t)nb * (size_t)K);
+        if (B_tile == NULL) {
+            rc = 1;
+        } else {
+            for (BLASLONG k = 0; k < K; ++k) {
+                for (BLASLONG c = 0; c < nb; ++c) {
+                    B_tile[(size_t)k * (size_t)nb + (size_t)c] =
+                        B[(size_t)k * (size_t)N + (size_t)(n0 + c)];
+                }
+            }
+            rc = KERNEL_SYMBOL(M, nb, K, 1,
+                               A, B_tile, C + n0 * M, M);
+            free(B_tile);
+        }
+#elif defined(OMP_IME_INPUT_PREPACKED_ROWS)
         rc = KERNEL_SYMBOL(M, nb, K, 1,
                            A, B + n0 * K, C + n0 * M, M);
+#else
+#error "Unsupported native IME OpenMP input contract"
+#endif
+#else
+#error "Unsupported OpenMP kernel kind"
 #endif
         if (rc != 0) {
             error_flag = 1;

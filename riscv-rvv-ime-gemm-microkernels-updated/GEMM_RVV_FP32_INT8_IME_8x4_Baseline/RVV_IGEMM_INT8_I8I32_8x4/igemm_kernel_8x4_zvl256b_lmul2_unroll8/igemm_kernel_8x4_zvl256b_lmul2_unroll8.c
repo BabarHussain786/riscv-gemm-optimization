@@ -3,9 +3,9 @@ RVV INT8 GEMM Kernel
 Tile: 8x4
 Variant: igemm_kernel_8x4_zvl256b_lmul2_unroll8
 LMUL label: 2
-LMUL compute path: native
+RVV LMUL mapping: direct
 Unroll: 8
-Math contract: same blocking shape/load as FP32 8x4 (M/8 x N/4 main + tails)
+Math contract: 8x4 INT8 tiled path with full-tile processing and boundary cleanup
 */
 
 /*

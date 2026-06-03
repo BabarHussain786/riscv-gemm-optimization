@@ -8,6 +8,7 @@ K="${K:-1024}"
 RUNS="${RUNS:-6}"
 RVV_CORES="${RVV_CORES:-0 1 2 3 4 5 6 7}"
 IME_CORES="${IME_CORES:-0 1 2 3}"
+ENABLE_EXPERIMENTAL_MF2="${ENABLE_EXPERIMENTAL_MF2:-0}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/k1_01_rvv_ime_results_${M}}"
 RAW_DIR="${OUT_DIR}/raw_logs"
@@ -182,12 +183,20 @@ run_family() {
 
   for dir in "${dirs[@]}"; do
     local kernel build_log
+    local make_args=()
     kernel="$(basename "${dir}")"
     build_log="${RAW_DIR}/${baseline}_${family}_${kernel}_build_${STAMP}.log"
 
     log ""
     log "KERNEL: ${kernel}"
-    if ! (cd "${dir}" && make clean >> "${build_log}" 2>&1 && make >> "${build_log}" 2>&1); then
+    if [ "${family}" = "IME_INT8" ] && [[ "${kernel}" == *_lmulmf2_* ]]; then
+      if [ "${ENABLE_EXPERIMENTAL_MF2}" != "1" ]; then
+        log "  SKIPPED: experimental IME LMUL=mf2 requires ENABLE_EXPERIMENTAL_MF2=1"
+        continue
+      fi
+      make_args+=("EXPERIMENTAL_MF2=1")
+    fi
+    if ! (cd "${dir}" && make clean >> "${build_log}" 2>&1 && make "${make_args[@]}" >> "${build_log}" 2>&1); then
       log "  BUILD_FAILED: ${build_log}"
       for campaign in RVV IME; do
         if [ "${campaign_scope}" = "RVV_ONLY" ] && [ "${campaign}" != "RVV" ]; then
@@ -296,19 +305,18 @@ log "============================================================"
 
 run_family "GEMM_RVV_FP64_INT8_IME_8x4_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x4" "dgemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
 run_family "GEMM_RVV_FP64_INT8_IME_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP64_INT8_IME_8x4_Baseline" "IME_INT8" "IME_GEMM_INT8_I8I32_8x4_RVV_Fallback" "ime_kernel_8x4_zvl128b_*_unroll*" "IME_ONLY"
 
 run_family "GEMM_RVV_FP64_INT8_IME_8x8_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x8" "dgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
 run_family "GEMM_RVV_FP64_INT8_IME_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP64_INT8_IME_8x8_Baseline" "IME_INT8" "IME_GEMM_INT8_I8I32_8x8_RVV_Fallback" "ime_kernel_8x8_zvl256b_lmul*_unroll*" "IME_ONLY"
 
 run_family "GEMM_RVV_FP32_INT8_IME_8x4_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x4" "sgemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
 run_family "GEMM_RVV_FP32_INT8_IME_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP32_INT8_IME_8x4_Baseline" "IME_INT8" "IME_GEMM_INT8_I8I32_8x4_RVV_Fallback" "ime_kernel_8x4_zvl256b_*_unroll*" "IME_ONLY"
 
 run_family "GEMM_RVV_FP32_INT8_IME_8x8_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x8" "sgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
 run_family "GEMM_RVV_FP32_INT8_IME_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP32_INT8_IME_8x8_Baseline" "IME_INT8" "IME_GEMM_INT8_I8I32_8x8_RVV_Fallback" "ime_kernel_8x8_zvl128b_lmul*_unroll*" "IME_ONLY"
+
+run_family "IME_NATIVE_KERNELS" "IME_INT8" "IME_GEMM_INT8_I8I32_8x4_NATIVE" "ime_kernel_8x4_zvl*b_lmul*_unroll*" "IME_ONLY"
+run_family "IME_NATIVE_KERNELS" "IME_INT8" "IME_GEMM_INT8_I8I32_8x8_NATIVE" "ime_kernel_8x8_zvl*b_lmul*_unroll*" "IME_ONLY"
 
 write_summary
 

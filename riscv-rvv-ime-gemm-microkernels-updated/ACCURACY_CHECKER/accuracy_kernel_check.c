@@ -47,10 +47,10 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 
 #if defined(ACC_KIND_INT8_IME)
 #if !defined(ACC_IME_INPUT_FULL_MATRIX) && !defined(ACC_IME_INPUT_PREPACKED_ROWS)
-#error "IME accuracy builds must define one ACC_IME_INPUT_* contract"
+#error "Native IME accuracy builds require one documented input contract"
 #endif
 #if defined(ACC_IME_INPUT_FULL_MATRIX) && defined(ACC_IME_INPUT_PREPACKED_ROWS)
-#error "Define only one ACC_IME_INPUT_* contract"
+#error "Define only one native IME input contract"
 #endif
 #endif
 
@@ -440,8 +440,8 @@ static void fill_i8_cancellation_packed(int8_t *x, BLASLONG outer, BLASLONG K,
 
 #elif defined(ACC_IME_INPUT_FULL_MATRIX)
 /*
- * IME 8x4 wrappers receive full K-major matrices and pack their tiles
- * internally. Preserve that contract for the cancellation input class.
+ * Native IME wrappers receive full K-major matrices and pack their hardware
+ * tiles internally. Preserve that contract for the cancellation input class.
  */
 static void fill_i8_cancellation_full_matrix(int8_t *x, BLASLONG outer,
                                              BLASLONG K, int is_a)

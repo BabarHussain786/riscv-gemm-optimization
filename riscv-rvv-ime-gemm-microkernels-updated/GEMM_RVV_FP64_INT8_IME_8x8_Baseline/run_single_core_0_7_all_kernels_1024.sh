@@ -21,7 +21,6 @@ LATEST_SUMMARY="${OUT_DIR}/single_core_summary_latest.csv"
 
 FP64_ROOT="${BASE_DIR}/RVV_DGEMM_FP64_8x8"
 INT8_ROOT="${BASE_DIR}/RVV_IGEMM_INT8_I8I32_8x8"
-IME_ROOT="${BASE_DIR}/IME_GEMM_INT8_I8I32_8x8_RVV_Fallback"
 
 if command -v taskset >/dev/null 2>&1; then
   HAVE_TASKSET=1
@@ -209,7 +208,7 @@ write_summary() {
   ' "${RAW_CSV}" > "${SUMMARY_CSV}"
 }
 
-echo "Single-core full benchmark sweep" | tee "${LIVE_LOG}"
+echo "Single-core RVV baseline benchmark sweep" | tee "${LIVE_LOG}"
 echo "Generated: $(date)" | tee -a "${LIVE_LOG}"
 echo "M=${M} N=${N} K=${K} RUNS=${RUNS}" | tee -a "${LIVE_LOG}"
 echo "CORES=${CORES}" | tee -a "${LIVE_LOG}"
@@ -226,7 +225,6 @@ echo 'family,kernel,core,domain,run,m,n,k,metric,value,time_sec,status,return_co
 
 run_family "FP64_DGEMM" "${FP64_ROOT}" "dgemm_kernel_8x8_${ZVL_FILTER}_lmul*_unroll*"
 run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x8_${ZVL_FILTER}_lmul*_unroll*"
-run_family "IME_INT8_RVV_FALLBACK" "${IME_ROOT}" "ime_kernel_8x8_${ZVL_FILTER}_*_unroll*"
 
 write_summary
 cp "${RAW_CSV}" "${LATEST_RAW}"

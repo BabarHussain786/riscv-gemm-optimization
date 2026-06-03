@@ -1,6 +1,6 @@
-# FP64, INT8, and IME GEMM Baseline: 8x8 Tiles
+# FP64 and INT8 RVV GEMM Baseline: 8x8 Tiles
 
-This baseline groups the RVV and IME microkernels used to evaluate FP64 plus INT8 workloads with the 8x8 tile shape. It is one of the four top-level benchmark groups used by the K1 and K3 campaign scripts.
+This baseline groups the RVV microkernels used to evaluate FP64 and INT8 workloads with the 8x8 tile shape. Native IME kernels are stored separately under `../IME_NATIVE_KERNELS/` because their hardware tile shape depends on the board profile.
 
 ## Active Kernel Families
 
@@ -8,7 +8,6 @@ This baseline groups the RVV and IME microkernels used to evaluate FP64 plus INT
 |---|---|---:|
 | `RVV_DGEMM_FP64_8x8/` | FP64 x FP64 -> FP64 RVV DGEMM kernels | 32 |
 | `RVV_IGEMM_INT8_I8I32_8x8/` | INT8 x INT8 -> INT32 RVV IGEMM kernels | 56 |
-| `IME_GEMM_INT8_I8I32_8x8_RVV_Fallback/` | INT8 x INT8 -> INT32 IME kernels with local RVV fallback | 8 |
 
 ## Directory Contract
 
@@ -18,16 +17,6 @@ Each kernel variant is stored in its own folder:
 <kernel_variant>/
 +-- <kernel_variant>.c
 +-- *_bench.c
-+-- Makefile
-```
-
-Each IME variant is self-contained:
-
-```text
-<ime_kernel_variant>/
-+-- ime_kernel_*.c
-+-- rvv_fallback.c
-+-- ime_bench.c
 +-- Makefile
 ```
 
@@ -69,5 +58,5 @@ Use `single_core_summary_latest.csv` for tables and plots. Use `raw_logs/` to in
 ## Notes
 
 - Kernel names encode tile shape, ZVL target, LMUL label, and unroll factor.
-- INT8 and IME kernels compute INT8 x INT8 dot products into INT32 outputs.
+- INT8 kernels compute INT8 x INT8 dot products into INT32 outputs.
 - Boundary cleanup handles leftover rows or columns outside the full micro-tile path.

@@ -97,7 +97,7 @@ int igemm_kernel_8x8_zvl256b_lmul8_unroll8_i8i32(BLASLONG M, BLASLONG N, BLASLON
         return -1;
     }
     /* Kernel section: main vectorized tile pass
-     * Iterates over full tiles and keeps the hot K loop in RVV or IME registers.
+     * Iterates over full tiles and keeps the hot K loop in RVV vector registers.
      */
     for (BLASLONG j = 0; j < N / 8; ++j) {
         m_top = 0;
@@ -154,6 +154,7 @@ int igemm_kernel_8x8_zvl256b_lmul8_unroll8_i8i32(BLASLONG M, BLASLONG N, BLASLON
             m_top += 1;
         }
         n_top += 8;
+    }
     /* Kernel section: boundary cleanup for the remaining N=4 column group. */
     if (N & 4) {
         m_top = 0;

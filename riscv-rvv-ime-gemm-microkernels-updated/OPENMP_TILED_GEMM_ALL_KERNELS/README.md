@@ -23,6 +23,10 @@ kernel computes each tile using the corresponding packed panel of `B`. This
 checks that tiled execution, thread scheduling, and kernel calls work correctly
 before distributing tiles across different clusters.
 
+The preserved native IME wrappers keep their original input contracts. The
+OpenMP launcher supplies full K-major matrices to `8x4` IME wrappers and
+prepacked row-oriented panels to `8x8` IME wrappers.
+
 The next extension is a heterogeneous RVV+IME scheduler. In that version, RVV
 cores compute some output tiles and IME cores compute other output tiles. The
 tile ratio should be chosen from measured throughput, assigning more work to the
@@ -48,6 +52,7 @@ README.md
 
 ```text
 k1-rvv   RVV FP32, FP64, and INT8 kernels on cores 0-7
+k1-ime   IME INT8 kernels on cores 0-3
 k3-rvv   RVV FP32, FP64, and INT8 kernels on cores 0-7
 k3-ime   IME INT8 kernels on cores 8-15
 local    all discovered kernels without forcing a core group
@@ -65,6 +70,12 @@ K1 RVV cluster:
 
 ```bash
 bash run_all_openmp_kernels.sh k1-rvv 1024 1024 1024 64 6
+```
+
+K1 IME cluster:
+
+```bash
+bash run_all_openmp_kernels.sh k1-ime 1024 1024 1024 64 6
 ```
 
 K3 RVV cluster:

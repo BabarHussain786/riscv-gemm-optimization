@@ -36,6 +36,10 @@ case "${MODE}" in
         TASKSET_CORES="0-7"
         CORE_GROUP="0-7"
         ;;
+    k1-ime)
+        TASKSET_CORES="0-3"
+        CORE_GROUP="0-3"
+        ;;
     k3-ime)
         TASKSET_CORES="8-15"
         CORE_GROUP="8-15"
@@ -48,7 +52,7 @@ case "${MODE}" in
         CORE_GROUP="local"
         ;;
     *)
-        echo "Usage: $0 {k1-rvv|k3-rvv|k3-ime|local} [M] [N] [K] [tile_N] [runs]"
+        echo "Usage: $0 {k1-rvv|k1-ime|k3-rvv|k3-ime|local} [M] [N] [K] [tile_N] [runs]"
         exit 1
         ;;
 esac
@@ -91,9 +95,26 @@ include_kind_in_mode()
     local kind="$1"
     case "${MODE}:${kind}" in
         k1-rvv:FP32_RVV|k1-rvv:FP64_RVV|k1-rvv:INT8_RVV) return 0 ;;
+        k1-ime:INT8_IME) return 0 ;;
         k3-rvv:FP32_RVV|k3-rvv:FP64_RVV|k3-rvv:INT8_RVV) return 0 ;;
         k3-ime:INT8_IME) return 0 ;;
         local:*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+include_kernel_dir_in_mode()
+{
+    local kind="$1"
+    local kernel_dir="$2"
+
+    if [ "${kind}" != "INT8_IME" ]; then
+        return 0
+    fi
+
+    case "${MODE}:${kernel_dir}" in
+        k1-ime:*IME_NATIVE_KERNELS/*|k3-ime:*IME_NATIVE_KERNELS/*) return 0 ;;
+        local:*IME_NATIVE_KERNELS/*) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -103,22 +124,32 @@ compile_kernel()
     local kind="$1"
     local march="$2"
     local symbol="$3"
-    local exe="$4"
-    local build_log="$5"
-    shift 5
+    local input_contract="$4"
+    local exe="$5"
+    local build_log="$6"
+    shift 6
     local sources=("$@")
     local define_kind=""
+    local extra_defines=()
 
     case "${kind}" in
         FP32_RVV) define_kind="-DOMP_KIND_FP32" ;;
         FP64_RVV) define_kind="-DOMP_KIND_FP64" ;;
         INT8_RVV) define_kind="-DOMP_KIND_INT8_RVV" ;;
-        INT8_IME) define_kind="-DOMP_KIND_INT8_IME" ;;
+        INT8_IME)
+            define_kind="-DOMP_KIND_INT8_IME"
+            extra_defines+=("-DSPACEMIT_IME_REQUIRE_HARDWARE=1")
+            case "${input_contract}" in
+                IME_FULL_K_MAJOR) extra_defines+=("-DOMP_IME_INPUT_FULL_MATRIX=1") ;;
+                IME_PREPACKED_ROWS) extra_defines+=("-DOMP_IME_INPUT_PREPACKED_ROWS=1") ;;
+                *) return 1 ;;
+            esac
+            ;;
         *) return 1 ;;
     esac
 
     "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
-        "${define_kind}" -DKERNEL_SYMBOL="${symbol}" \
+        "${define_kind}" "${extra_defines[@]}" -DKERNEL_SYMBOL="${symbol}" \
         "${TEMPLATE}" "${sources[@]}" -o "${exe}" > "${build_log}" 2>&1
 }
 
@@ -175,7 +206,7 @@ while IFS= read -r -d '' makefile; do
         continue
     fi
 
-    if ! include_kind_in_mode "${kind}"; then
+    if ! include_kind_in_mode "${kind}" || ! include_kernel_dir_in_mode "${kind}" "${kernel_dir}"; then
         continue
     fi
 
@@ -188,9 +219,18 @@ while IFS= read -r -d '' makefile; do
     lmul="$(field_from_kernel "${kernel}" 's/.*_lmul\([^_]*\)_unroll.*/\1/p')"
     unroll="$(field_from_kernel "${kernel}" 's/.*_unroll\([0-9]*\).*/\1/p')"
     march="${RVV128_MARCH}"
+    input_contract="NOT_APPLICABLE"
 
     if printf '%s\n' "${kernel}" | grep -q 'zvl256b'; then
         march="${RVV256_MARCH}"
+    fi
+
+    if [ "${kind}" = "INT8_IME" ]; then
+        case "${tile_shape}" in
+            8x4) input_contract="IME_FULL_K_MAJOR" ;;
+            8x8) input_contract="IME_PREPACKED_ROWS" ;;
+            *) continue ;;
+        esac
     fi
 
     safe_name="${baseline}_${family}_${kernel}"
@@ -202,13 +242,14 @@ while IFS= read -r -d '' makefile; do
     log "BASELINE=${baseline}"
     log "FAMILY=${family}"
     log "KIND=${kind}"
+    log "INPUT_CONTRACT=${input_contract}"
 
     sources=("${src}")
     if [ "${kind}" = "INT8_IME" ]; then
         sources+=("${fallback_src}")
     fi
 
-    if ! compile_kernel "${kind}" "${march}" "${symbol}" "${exe}" "${build_log}" "${sources[@]}"; then
+    if ! compile_kernel "${kind}" "${march}" "${symbol}" "${input_contract}" "${exe}" "${build_log}" "${sources[@]}"; then
         build_failed_count=$((build_failed_count + 1))
         log "BUILD_FAILED: ${build_log}"
         printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \

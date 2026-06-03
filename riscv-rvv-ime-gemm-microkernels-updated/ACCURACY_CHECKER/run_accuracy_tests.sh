@@ -28,6 +28,7 @@ BASE_SEED="${BASE_SEED:-0}"
 # experiment per datatype. Set these variables explicitly to add diagnostics.
 FP_INPUT_CLASSES="${FP_INPUT_CLASSES:-bounded_uniform}"
 INT8_INPUT_CLASSES="${INT8_INPUT_CLASSES:-full_range_uniform}"
+ENABLE_EXPERIMENTAL_MF2="${ENABLE_EXPERIMENTAL_MF2:-0}"
 
 usage()
 {
@@ -102,6 +103,21 @@ include_kind_in_mode()
         k1-ime:INT8_IME) return 0 ;;
         k3-rvv:FP32_RVV|k3-rvv:FP64_RVV|k3-rvv:INT8_RVV) return 0 ;;
         k3-ime:INT8_IME) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+include_kernel_dir_in_mode()
+{
+    local kind="$1"
+    local kernel_dir="$2"
+
+    if [ "${kind}" != "INT8_IME" ]; then
+        return 0
+    fi
+
+    case "${MODE}:${kernel_dir}" in
+        k1-ime:*IME_NATIVE_KERNELS/*|k3-ime:*IME_NATIVE_KERNELS/*) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -193,6 +209,10 @@ compile_kernel()
         INT8_IME)
             define_kind="-DACC_KIND_INT8_IME"
             extra_defines+=("-DSPACEMIT_IME_REQUIRE_HARDWARE=1")
+            if [ "${ENABLE_EXPERIMENTAL_MF2}" = "1" ] &&
+               printf '%s\n' "${symbol}" | grep -q '_lmulmf2_'; then
+                extra_defines+=("-DSPACEMIT_IME_ENABLE_EXPERIMENTAL_MF2_NATIVE=1")
+            fi
             case "${input_contract}" in
                 IME_FULL_K_MAJOR)
                     extra_defines+=("-DACC_IME_INPUT_FULL_MATRIX=1")
@@ -227,7 +247,7 @@ printf 'timestamp,mode,core,execution_path,input_contract,reference_method,gener
 log "Accuracy checker"
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
 log "Matrix size is fixed to 1024x1024x1024 for this project."
-log "Input contracts: packed tile panels for RVV; full K-major matrices for IME 8x4; prepacked row/column panels for IME 8x8."
+log "Input contracts: packed tile panels for RVV; full K-major matrices for all IME wrappers."
 log "PROJECT_ROOT=${PROJECT_ROOT}"
 log "RESULT_DIR=${RESULT_DIR}"
 log "BASE_SEED=${BASE_SEED}"
@@ -235,6 +255,7 @@ log "Seed rule: generator_seed = BASE_SEED + input_class_index * RUNS + run_inde
 log "Default single-class run uses seed 1. The seed is recorded for reproducibility; it is not a hardware parameter."
 log "FP_INPUT_CLASSES=${FP_INPUT_CLASSES}"
 log "INT8_INPUT_CLASSES=${INT8_INPUT_CLASSES}"
+log "ENABLE_EXPERIMENTAL_MF2=${ENABLE_EXPERIMENTAL_MF2}"
 grep Cpus_allowed_list /proc/self/status 2>/dev/null | tee -a "${LATEST_LOG}" || true
 
 kernel_count=0
@@ -269,7 +290,7 @@ while IFS= read -r -d '' makefile; do
         continue
     fi
 
-    if ! include_kind_in_mode "${kind}"; then
+    if ! include_kind_in_mode "${kind}" || ! include_kernel_dir_in_mode "${kind}" "${kernel_dir}"; then
         continue
     fi
 
@@ -298,11 +319,11 @@ while IFS= read -r -d '' makefile; do
     fi
 
     if [ "${kind}" = "INT8_IME" ]; then
-        case "${tile_shape}" in
-            8x4) input_contract="IME_FULL_K_MAJOR" ;;
-            8x8) input_contract="IME_PREPACKED_ROWS" ;;
-            *) continue ;;
-        esac
+        input_contract="IME_FULL_K_MAJOR"
+        if [ "${lmul}" = "mf2" ] && [ "${ENABLE_EXPERIMENTAL_MF2}" != "1" ]; then
+            log "SKIP_EXPERIMENTAL_MF2=${kernel}"
+            continue
+        fi
     fi
 
     safe_name="${baseline}_${family}_${kernel}"

@@ -45,7 +45,7 @@ int dgemm_kernel_8x8_zvl256b_lmul2_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
 
     /* Kernel section: main vectorized tile pass
 
-     * Iterates over full tiles and keeps the hot K loop in RVV or IME registers.
+     * Iterates over full tiles and keeps the hot K loop in RVV vector registers.
 
      */
     for (BLASLONG j=0; j<N/8; j+=1) {

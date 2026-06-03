@@ -20,7 +20,6 @@ LATEST_SUMMARY="${OUT_DIR}/single_core_summary_latest.csv"
 
 FP32_ROOT="${BASE_DIR}/RVV_SGEMM_FP32_8x4"
 INT8_ROOT="${BASE_DIR}/RVV_IGEMM_INT8_I8I32_8x4"
-IME_ROOT="${BASE_DIR}/IME_GEMM_INT8_I8I32_8x4_RVV_Fallback"
 
 if command -v taskset >/dev/null 2>&1; then
   HAVE_TASKSET=1
@@ -224,7 +223,6 @@ echo 'family,kernel,core,domain,run,m,n,k,metric,value,time_sec,status,return_co
 
 run_family "FP32_SGEMM" "${FP32_ROOT}" "sgemm_kernel_8x4_zvl256b_lmul*_unroll*"
 run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x4_zvl256b_lmul*_unroll*"
-run_family "IME_INT8_RVV_FALLBACK" "${IME_ROOT}" "ime_kernel_8x4_zvl256b_*_unroll*"
 
 write_summary
 cp "${RAW_CSV}" "${LATEST_RAW}"

@@ -10,7 +10,6 @@ CORES="${CORES:-0 1 2 3 4 5 6 7}"
 
 FP32_ROOT="${BASE_DIR}/RVV_SGEMM_FP32_8x8"
 INT8_ROOT="${BASE_DIR}/RVV_IGEMM_INT8_I8I32_8x8"
-IME_ROOT="${BASE_DIR}/IME_GEMM_INT8_I8I32_8x8_RVV_Fallback"
 
 OUT_DIR="${OUT_DIR:-${BASE_DIR}/single_core_results_${M}}"
 RAW_LOG_DIR="${OUT_DIR}/raw_logs"
@@ -186,7 +185,6 @@ printf 'Output: %s\n' "${OUT_DIR}" | tee -a "${LIVE_LOG}"
 
 run_family "FP32_SGEMM" "${FP32_ROOT}" "sgemm_kernel_8x8_zvl128b_lmul*_unroll*"
 run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x8_zvl128b_lmul*_unroll*"
-run_family "IME_INT8_RVV_FALLBACK" "${IME_ROOT}" "ime_kernel_8x8_zvl128b_lmul*_unroll*"
 
 write_summary
 

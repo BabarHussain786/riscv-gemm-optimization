@@ -5,7 +5,7 @@ Variant: igemm_kernel_8x4_zvl256b_lmul4_unroll2
 LMUL label: 4
 LMUL compute path: i8m4_vector_loads_legal_i32_accumulation
 Unroll: 2
-Math contract: same blocking shape/load as FP32 8x4 (M/8 x N/4 main + tails)
+Math contract: 8x4 INT8 tiled path with full-tile processing and boundary cleanup
 */
 
 /* LMUL note: this variant uses i8m4 input vector loads/stores and ISA-legal INT32 accumulation to keep the implementation ISA-legal. */
