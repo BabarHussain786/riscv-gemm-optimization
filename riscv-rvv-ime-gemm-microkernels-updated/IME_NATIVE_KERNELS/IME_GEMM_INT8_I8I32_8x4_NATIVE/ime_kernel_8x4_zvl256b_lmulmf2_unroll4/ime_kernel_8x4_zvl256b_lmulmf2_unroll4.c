@@ -23,7 +23,7 @@
  *   Current public SpacemiT documentation reserves non-1 IME LMUL values.
  *   This mf2 variant remains available for explicit research-board testing,
  *   but normal builds use its local RVV fallback unless
- *   SPACEMIT_IME_ENABLE_EXPERIMENTAL_MF2_NATIVE is defined.
+ *   SPACEMIT_IME_ENABLE_MF2_NATIVE is defined.
  *
  * Portability:
  *   The matching rvv_fallback.c remains local to this kernel folder.
@@ -45,7 +45,7 @@
 #define SPACEMIT_IME_HAS_RVV 0
 #endif
 
-#if defined(SPACEMIT_IME_ENABLE_EXPERIMENTAL_MF2_NATIVE)
+#if defined(SPACEMIT_IME_ENABLE_MF2_NATIVE)
 #define SPACEMIT_IME_NATIVE_ENABLED 1
 #else
 #define SPACEMIT_IME_NATIVE_ENABLED 0

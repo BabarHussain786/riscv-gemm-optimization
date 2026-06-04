@@ -8,7 +8,7 @@ N="${N:-1024}"
 K="${K:-1024}"
 INPUT_CLASS="${INPUT_CLASS:-full_range_uniform}"
 BASE_SEED="${BASE_SEED:-0}"
-ENABLE_EXPERIMENTAL_MF2="${ENABLE_EXPERIMENTAL_MF2:-0}"
+ENABLE_MF2="${ENABLE_MF2:-0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -40,7 +40,7 @@ Environment options:
   M N K                         default 1024 1024 1024
   INPUT_CLASS                   default full_range_uniform
   BASE_SEED                     default 0
-  ENABLE_EXPERIMENTAL_MF2=1     also allow mf2 native IME experiments
+  ENABLE_MF2=1     include LMUL mf2 native IME kernels
 EOF
 }
 
@@ -136,9 +136,9 @@ compile_check()
 
     if [ "${mode_kind}" = "ime_native" ]; then
         defines+=("-DSPACEMIT_IME_REQUIRE_HARDWARE=1")
-        if [ "${ENABLE_EXPERIMENTAL_MF2}" = "1" ] &&
+        if [ "${ENABLE_MF2}" = "1" ] &&
            printf '%s\n' "${symbol}" | grep -q '_lmulmf2_'; then
-            defines+=("-DSPACEMIT_IME_ENABLE_EXPERIMENTAL_MF2_NATIVE=1")
+            defines+=("-DSPACEMIT_IME_ENABLE_MF2_NATIVE=1")
         fi
     fi
 
@@ -168,7 +168,7 @@ log "This follows the paper-style reference comparison principle, adapted to INT
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
 log "INPUT_CLASS=${INPUT_CLASS}"
 log "BASE_SEED=${BASE_SEED}"
-log "ENABLE_EXPERIMENTAL_MF2=${ENABLE_EXPERIMENTAL_MF2}"
+log "ENABLE_MF2=${ENABLE_MF2}"
 log "IME_CORES=${IME_CORES}"
 log "RVV_CORES=${RVV_CORES}"
 log "RESULT_DIR=${RESULT_DIR}"
@@ -219,6 +219,14 @@ while IFS= read -r kernel_dir; do
     else
         build_failed_count=$((build_failed_count + 1))
         log "IME_NATIVE BUILD_FAILED: ${ime_build_log}"
+        {
+            printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,' \
+                "$(date -Iseconds)" "${MODE}" "IME_NATIVE" "NA" "NA" \
+                "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" \
+                "${INPUT_CLASS}" "${M}" "${N}" "${K}" "BUILD_FAILED" "NA" "NA" \
+                "NA" "NA" "NA" "NA"
+            printf '%s,%s,%s\n' "$(csv_quote "NA")" "$(csv_quote "NA")" "$(csv_quote "${ime_build_log}")"
+        } >> "${CSV}"
         ime_exe=""
     fi
 
@@ -228,6 +236,14 @@ while IFS= read -r kernel_dir; do
     else
         build_failed_count=$((build_failed_count + 1))
         log "RVV_FALLBACK BUILD_FAILED: ${rvv_build_log}"
+        {
+            printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,' \
+                "$(date -Iseconds)" "${MODE}" "RVV_FALLBACK" "NA" "NA" \
+                "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" \
+                "${INPUT_CLASS}" "${M}" "${N}" "${K}" "BUILD_FAILED" "NA" "NA" \
+                "NA" "NA" "NA" "NA"
+            printf '%s,%s,%s\n' "$(csv_quote "NA")" "$(csv_quote "NA")" "$(csv_quote "${rvv_build_log}")"
+        } >> "${CSV}"
         rvv_exe=""
     fi
 
