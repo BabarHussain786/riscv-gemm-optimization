@@ -36,10 +36,10 @@ ENABLE_EXPERIMENTAL_MF2=1 bash run_k3_rvv_ime_0_15_1024.sh
 
 ```text
 riscv-rvv-ime-gemm-microkernels/
-+-- GEMM_RVV_FP32_INT8_IME_8x4_Baseline/
-+-- GEMM_RVV_FP32_INT8_IME_8x8_Baseline/
-+-- GEMM_RVV_FP64_INT8_IME_8x4_Baseline/
-+-- GEMM_RVV_FP64_INT8_IME_8x8_Baseline/
++-- GEMM_RVV_FP32_INT8_8x4_Baseline/
++-- GEMM_RVV_FP32_INT8_8x8_Baseline/
++-- GEMM_RVV_FP64_INT8_8x4_Baseline/
++-- GEMM_RVV_FP64_INT8_8x8_Baseline/
 +-- IME_NATIVE_KERNELS/
 |   +-- IME_GEMM_INT8_I8I32_8x4_NATIVE/
 |   +-- IME_GEMM_INT8_I8I32_8x8_NATIVE/
@@ -88,6 +88,24 @@ bash ACCURACY_CHECKER/run_accuracy_tests.sh k3-ime 1
 INT8 validation compares every INT32 result element against a wider-integer
 reference computed from the same full-range signed INT8 matrices. Read
 `ACCURACY_CHECKER/README.md` for the complete method and CSV fields.
+
+### INT8 IME Native and RVV Fallback Campaigns
+
+These focused campaigns validate only the IME-native and corresponding
+RVV-fallback INT8-to-INT32 paths. Their paper names identify related
+experimental ideas; they are adaptations for this project, not exact
+reproductions.
+
+```bash
+ENABLE_MF2=1 bash ACCURACY_CHECKER/INT8_IME_RVV_FALLBACK_METHODS/run_01_ozaki_inspired_elementwise_error.sh k1 1
+ENABLE_MF2=1 bash ACCURACY_CHECKER/INT8_IME_RVV_FALLBACK_METHODS/run_02_cascading_gemm_inspired_multi_input.sh k1 1
+ENABLE_MF2=1 bash ACCURACY_CHECKER/INT8_IME_RVV_FALLBACK_METHODS/run_03_narrow_range_inspired_validation.sh k1 1
+```
+
+The campaigns respectively report element-wise exact-error histograms,
+comparisons across multiple controlled input classes, and range/overflow plus
+normalized-error metrics. Read
+`ACCURACY_CHECKER/INT8_IME_RVV_FALLBACK_METHODS/README.md` for details.
 
 ## OpenMP Tiled Extension
 

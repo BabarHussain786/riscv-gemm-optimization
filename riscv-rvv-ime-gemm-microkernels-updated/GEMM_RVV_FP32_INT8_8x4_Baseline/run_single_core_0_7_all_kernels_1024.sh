@@ -207,7 +207,7 @@ write_summary() {
   ' "${RAW_CSV}" > "${SUMMARY_CSV}"
 }
 
-echo "Single-core FP32/INT8/IME 8x4 benchmark sweep" | tee "${LIVE_LOG}"
+echo "Single-core FP32/INT8 RVV 8x4 benchmark sweep" | tee "${LIVE_LOG}"
 echo "Generated: $(date)" | tee -a "${LIVE_LOG}"
 echo "M=${M} N=${N} K=${K} RUNS=${RUNS}" | tee -a "${LIVE_LOG}"
 echo "CORES=${CORES}" | tee -a "${LIVE_LOG}"

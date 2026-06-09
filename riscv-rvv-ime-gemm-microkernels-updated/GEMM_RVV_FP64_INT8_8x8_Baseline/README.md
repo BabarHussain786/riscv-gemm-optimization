@@ -1,13 +1,13 @@
-# FP32 and INT8 RVV GEMM Baseline: 8x4 Tiles
+# FP64 and INT8 RVV GEMM Baseline: 8x8 Tiles
 
-This baseline groups the RVV microkernels used to evaluate FP32 and INT8 workloads with the 8x4 tile shape. Native IME kernels are stored separately under `../IME_NATIVE_KERNELS/` because their hardware tile shape depends on the board profile.
+This baseline groups the RVV microkernels used to evaluate FP64 and INT8 workloads with the 8x8 tile shape. Native IME kernels are stored separately under `../IME_NATIVE_KERNELS/` because their hardware tile shape depends on the board profile.
 
 ## Active Kernel Families
 
 | Folder | Purpose | Variants |
 |---|---|---:|
-| `RVV_SGEMM_FP32_8x4/` | FP32 x FP32 -> FP32 RVV SGEMM kernels | 20 |
-| `RVV_IGEMM_INT8_I8I32_8x4/` | INT8 x INT8 -> INT32 RVV IGEMM kernels | 28 |
+| `RVV_DGEMM_FP64_8x8/` | FP64 x FP64 -> FP64 RVV DGEMM kernels | 32 |
+| `RVV_IGEMM_INT8_I8I32_8x8/` | INT8 x INT8 -> INT32 RVV IGEMM kernels | 56 |
 
 ## Directory Contract
 
@@ -23,7 +23,7 @@ Each kernel variant is stored in its own folder:
 ## Run This Baseline
 
 ```bash
-cd ~/riscv-rvv-ime-gemm-microkernels/GEMM_RVV_FP32_INT8_IME_8x4_Baseline
+cd ~/riscv-rvv-ime-gemm-microkernels/GEMM_RVV_FP64_INT8_8x8_Baseline
 bash run_single_core_0_7_all_kernels_1024.sh
 ```
 

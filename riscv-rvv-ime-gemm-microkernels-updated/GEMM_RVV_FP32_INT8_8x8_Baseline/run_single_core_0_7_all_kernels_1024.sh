@@ -179,7 +179,7 @@ write_summary() {
         }
     }' "${RAW_CSV}" | sort >> "${SUMMARY_CSV}"
 }
-printf 'FP32/INT8/IME 8x8 single-core benchmark\n' | tee "${LIVE_LOG}"
+printf 'FP32/INT8 RVV 8x8 single-core benchmark\n' | tee "${LIVE_LOG}"
 printf 'Matrix size: M=%s N=%s K=%s, runs=%s, cores=%s\n' "${M}" "${N}" "${K}" "${RUNS}" "${CORES}" | tee -a "${LIVE_LOG}"
 printf 'Output: %s\n' "${OUT_DIR}" | tee -a "${LIVE_LOG}"
 

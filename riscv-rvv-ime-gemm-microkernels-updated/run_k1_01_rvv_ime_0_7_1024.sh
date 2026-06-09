@@ -303,17 +303,17 @@ log "Output: ${OUT_DIR}"
 log "Started: $(date)"
 log "============================================================"
 
-run_family "GEMM_RVV_FP64_INT8_IME_8x4_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x4" "dgemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP64_INT8_IME_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP64_INT8_8x4_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x4" "dgemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP64_INT8_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl128b_lmul*_unroll*" "RVV_ONLY"
 
-run_family "GEMM_RVV_FP64_INT8_IME_8x8_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x8" "dgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP64_INT8_IME_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP64_INT8_8x8_Baseline" "FP64_DGEMM" "RVV_DGEMM_FP64_8x8" "dgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP64_INT8_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
 
-run_family "GEMM_RVV_FP32_INT8_IME_8x4_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x4" "sgemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP32_INT8_IME_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP32_INT8_8x4_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x4" "sgemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP32_INT8_8x4_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x4" "igemm_kernel_8x4_zvl256b_lmul*_unroll*" "RVV_ONLY"
 
-run_family "GEMM_RVV_FP32_INT8_IME_8x8_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x8" "sgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
-run_family "GEMM_RVV_FP32_INT8_IME_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP32_INT8_8x8_Baseline" "FP32_SGEMM" "RVV_SGEMM_FP32_8x8" "sgemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
+run_family "GEMM_RVV_FP32_INT8_8x8_Baseline" "INT8_RVV" "RVV_IGEMM_INT8_I8I32_8x8" "igemm_kernel_8x8_zvl128b_lmul*_unroll*" "RVV_ONLY"
 
 run_family "IME_NATIVE_KERNELS" "IME_INT8" "IME_GEMM_INT8_I8I32_8x4_NATIVE" "ime_kernel_8x4_zvl*b_lmul*_unroll*" "IME_ONLY"
 run_family "IME_NATIVE_KERNELS" "IME_INT8" "IME_GEMM_INT8_I8I32_8x8_NATIVE" "ime_kernel_8x8_zvl*b_lmul*_unroll*" "IME_ONLY"
