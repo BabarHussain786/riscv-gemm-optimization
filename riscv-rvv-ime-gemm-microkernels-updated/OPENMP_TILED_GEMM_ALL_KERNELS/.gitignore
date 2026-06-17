@@ -1,0 +1,16 @@
+# Generated OpenMP benchmark outputs
+openmp_results_*/
+openmp_raw_latest_*.csv
+openmp_live_latest_*.log
+
+# Build products
+build/
+raw_logs/
+*.o
+*.out
+*.elf
+*.exe
+
+# Local editor/cache noise
+.DS_Store
+Thumbs.db
