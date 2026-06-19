@@ -9,13 +9,16 @@ TILE_N="${5:-64}"
 RUNS="${6:-6}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-TEMPLATE="${SCRIPT_DIR}/omp_bench_template.c"
+MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_ROOT="$(cd "${MODULE_DIR}/.." && pwd)"
+TEMPLATE="${MODULE_DIR}/src/openmp_tiled_gemm_benchmark.c"
+RESULT_ROOT="${MODULE_DIR}/results"
 STAMP="$(date +%Y%m%d_%H%M%S)"
-RESULT_DIR="${SCRIPT_DIR}/openmp_results_${MODE}_${M}_${STAMP}"
+RESULT_DIR="${RESULT_ROOT}/openmp_results_${MODE}_${M}_${STAMP}"
 BUILD_DIR="${RESULT_DIR}/build"
 RAW_LOG_DIR="${RESULT_DIR}/raw_logs"
 RAW_CSV="${RESULT_DIR}/openmp_raw_${MODE}_${M}_runs${RUNS}_${STAMP}.csv"
+SUMMARY_CSV="${RESULT_DIR}/openmp_summary_${MODE}_${M}_runs${RUNS}_${STAMP}.csv"
 LIVE_LOG="${RESULT_DIR}/openmp_live_${MODE}_${M}_runs${RUNS}_${STAMP}.log"
 
 CC="${CC:-gcc}"
@@ -87,6 +90,164 @@ esac
 OMP_NUM_THREADS="${OMP_NUM_THREADS:-${DEFAULT_THREADS}}"
 export OMP_NUM_THREADS OMP_PROC_BIND OMP_PLACES OMP_DYNAMIC OMP_WARMUP
 
+mode_label()
+{
+    case "${MODE}" in
+        k1-rvv|k1-rvv-all) printf '%s\n' "K1 all-core RVV OpenMP baseline" ;;
+        k1-rvv-only) printf '%s\n' "K1 RVV-cluster OpenMP baseline" ;;
+        k1-ime) printf '%s\n' "K1 IME-cluster OpenMP baseline" ;;
+        k1-mixed-rvv-ime) printf '%s\n' "K1 heterogeneous OpenMP RVV-IME execution" ;;
+        k3-rvv) printf '%s\n' "K3 RVV OpenMP baseline" ;;
+        k3-ime) printf '%s\n' "K3 IME OpenMP baseline" ;;
+        k3-ime-cluster0) printf '%s\n' "K3 IME cluster-0 OpenMP baseline" ;;
+        k3-ime-cluster1) printf '%s\n' "K3 IME cluster-1 OpenMP baseline" ;;
+        local) printf '%s\n' "Local OpenMP inspection run" ;;
+        *) printf '%s\n' "OpenMP GEMM run" ;;
+    esac
+}
+
+core_description()
+{
+    case "${MODE}" in
+        k1-rvv|k1-rvv-all) printf '%s\n' "cores 0-7 execute RVV kernels" ;;
+        k1-rvv-only) printf '%s\n' "cores 4-7 execute RVV kernels" ;;
+        k1-ime) printf '%s\n' "cores 0-3 execute native IME kernels" ;;
+        k1-mixed-rvv-ime) printf '%s\n' "cores 0-3 execute IME path; cores 4-7 execute RVV fallback path" ;;
+        k3-rvv) printf '%s\n' "cores 0-7 execute RVV kernels" ;;
+        k3-ime) printf '%s\n' "cores 8-15 execute IME kernels" ;;
+        k3-ime-cluster0) printf '%s\n' "cores 8-11 execute IME kernels" ;;
+        k3-ime-cluster1) printf '%s\n' "cores 12-15 execute IME kernels" ;;
+        local) printf '%s\n' "unrestricted local OpenMP placement" ;;
+        *) printf '%s\n' "core group ${CORE_GROUP}" ;;
+    esac
+}
+
+kind_label()
+{
+    case "$1" in
+        FP32_RVV) printf '%s\n' "FP32 RVV vector GEMM" ;;
+        FP64_RVV) printf '%s\n' "FP64 RVV vector GEMM" ;;
+        INT8_RVV) printf '%s\n' "INT8 RVV widening GEMM (INT8 x INT8 -> INT32)" ;;
+        INT8_IME) printf '%s\n' "INT8 native IME GEMM (INT8 x INT8 -> INT32)" ;;
+        INT8_MIXED) printf '%s\n' "INT8 heterogeneous IME/RVV-fallback GEMM (INT8 x INT8 -> INT32)" ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+log_kernel_header()
+{
+    local baseline="$1"
+    local family="$2"
+    local kernel="$3"
+    local kind="$4"
+    local tile_shape="$5"
+    local zvl="$6"
+    local lmul="$7"
+    local unroll="$8"
+    local input_contract="$9"
+
+    log "============================================================"
+    log "KERNEL: ${kernel}"
+    log "  MODE: $(mode_label)"
+    log "  BASELINE: ${baseline}"
+    log "  FAMILY: ${family}"
+    log "  PATH: $(kind_label "${kind}")"
+    log "  TILE: ${tile_shape} ZVL=${zvl} LMUL=${lmul} UNROLL=${unroll}"
+    log "  WORK: M=${M} N=${N} K=${K} tile_N=${TILE_N} runs=${RUNS}"
+    log "  CORES: $(core_description)"
+    log "  INPUT_CONTRACT: ${input_contract}"
+}
+
+log_run_result()
+{
+    local run="$1"
+    local status="$2"
+    local metric_name="$3"
+    local metric_value="$4"
+    local time_sec="$5"
+    local actual_threads="$6"
+    local validation="$7"
+    local return_code="$8"
+    local failure_stage="$9"
+    local worker_placement="${10}"
+
+    if [ "${metric_name}" = "NA" ] || [ "${metric_value}" = "NA" ]; then
+        log "    run ${run}: ${status} metric=NA time=${time_sec} threads=${actual_threads} validation=${validation} return=${return_code} stage=${failure_stage}"
+    else
+        log "    run ${run}: ${status} ${metric_name}=${metric_value} time=${time_sec} threads=${actual_threads} validation=${validation}"
+    fi
+
+    if [ -n "${worker_placement}" ] && [ "${worker_placement}" != "NA" ]; then
+        log "      workers: ${worker_placement}"
+    fi
+}
+
+write_summary_csv()
+{
+    awk -F, '
+    BEGIN {
+        OFS=",";
+        print "mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,metric_name,ok_runs,mean_metric,median_metric,min_metric,max_metric,std_metric,mean_time_sec,min_time_sec,max_time_sec,failed_runs,build_failed_runs";
+    }
+    NR == 1 { next }
+    {
+        baseline=$3; family=$4; kernel=$5;
+        gsub(/^"|"$/, "", baseline);
+        gsub(/^"|"$/, "", family);
+        gsub(/^"|"$/, "", kernel);
+        key=$2 OFS baseline OFS family OFS kernel OFS $6 OFS $7 OFS $8 OFS $9 OFS $10 OFS $11 OFS $12 OFS $23;
+        if (!(key in seen)) {
+            seen[key]=1;
+            keys[++key_count]=key;
+            min_value[key]="";
+            max_value[key]="";
+            min_time[key]="";
+            max_time[key]="";
+        }
+        if ($19 == "OK" && $22 != "NA" && $24 != "NA") {
+            n[key]++;
+            value=$24 + 0.0;
+            t=$22 + 0.0;
+            values[key, n[key]]=value;
+            sum_value[key]+=value;
+            sumsq_value[key]+=value*value;
+            sum_time[key]+=t;
+            if (min_value[key] == "" || value < min_value[key]) min_value[key]=value;
+            if (max_value[key] == "" || value > max_value[key]) max_value[key]=value;
+            if (min_time[key] == "" || t < min_time[key]) min_time[key]=t;
+            if (max_time[key] == "" || t > max_time[key]) max_time[key]=t;
+        } else if ($19 == "BUILD_FAILED") {
+            build_failed[key]++;
+        } else {
+            failed[key]++;
+        }
+    }
+    END {
+        for (i=1; i<=key_count; ++i) {
+            key=keys[i];
+            if (n[key] > 0) {
+                for (a=1; a<=n[key]; ++a) sorted[a]=values[key, a];
+                for (a=1; a<=n[key]; ++a) {
+                    for (b=a+1; b<=n[key]; ++b) {
+                        if (sorted[b] < sorted[a]) {
+                            tmp=sorted[a]; sorted[a]=sorted[b]; sorted[b]=tmp;
+                        }
+                    }
+                }
+                if (n[key] % 2) median=sorted[(n[key]+1)/2];
+                else median=(sorted[n[key]/2] + sorted[n[key]/2 + 1]) / 2.0;
+                mean=sum_value[key] / n[key];
+                variance=(sumsq_value[key] / n[key]) - mean*mean;
+                if (variance < 0) variance=0;
+                std=sqrt(variance);
+                mean_time=sum_time[key] / n[key];
+                printf "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%d,%d\n", key, n[key], mean, median, min_value[key], max_value[key], std, mean_time, min_time[key], max_time[key], failed[key]+0, build_failed[key]+0;
+            } else {
+                printf "%s,0,NA,NA,NA,NA,NA,NA,NA,NA,%d,%d\n", key, failed[key]+0, build_failed[key]+0;
+            }
+        }
+    }' "${RAW_CSV}" > "${SUMMARY_CSV}"
+}
 require_positive_integer()
 {
     local name="$1"
@@ -120,7 +281,7 @@ if [ "${MODE}" != "local" ] && ! command -v taskset >/dev/null 2>&1; then
     exit 1
 fi
 
-mkdir -p "${BUILD_DIR}" "${RAW_LOG_DIR}"
+mkdir -p "${RESULT_ROOT}" "${BUILD_DIR}" "${RAW_LOG_DIR}"
 
 log()
 {
@@ -265,7 +426,8 @@ run_binary_once()
 printf 'timestamp,mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,actual_threads,M,N,K,tile_N,run,status,return_code,failure_stage,time_sec,metric_name,metric_value,timing_scope,validation_method,mismatch_count,max_error,worker_placement,log_file\n' > "${RAW_CSV}"
 
 log "OpenMP all-kernel tiled GEMM campaign"
-log "MODE=${MODE} M=${M} N=${N} K=${K} tile_N=${TILE_N} RUNS=${RUNS}"
+log "MODE=${MODE} ($(mode_label)) M=${M} N=${N} K=${K} tile_N=${TILE_N} RUNS=${RUNS}"
+log "CORE_PLAN=$(core_description)"
 log "PROJECT_ROOT=${PROJECT_ROOT}"
 log "RESULT_DIR=${RESULT_DIR}"
 log "OMP_NUM_THREADS=${OMP_NUM_THREADS} OMP_PROC_BIND=${OMP_PROC_BIND} OMP_PLACES=${OMP_PLACES} OMP_DYNAMIC=${OMP_DYNAMIC}"
@@ -342,12 +504,7 @@ while IFS= read -r -d '' makefile; do
     exe="${BUILD_DIR}/${safe_name}"
     build_log="${RAW_LOG_DIR}/${safe_name}_build.log"
 
-    log "============================================================"
-    log "KERNEL=${kernel}"
-    log "BASELINE=${baseline}"
-    log "FAMILY=${family}"
-    log "KIND=${kind}"
-    log "INPUT_CONTRACT=${input_contract}"
+    log_kernel_header "${baseline}" "${family}" "${kernel}" "${kind}" "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "${input_contract}"
 
     sources=("${src}")
     if [ "${kind}" = "INT8_IME" ] || [ "${kind}" = "INT8_MIXED" ]; then
@@ -383,8 +540,6 @@ while IFS= read -r -d '' makefile; do
         if [ "${run}" -gt 1 ] && [ "${VALIDATE_EACH_RUN}" != "1" ]; then
             run_validation="0"
         fi
-        log "run ${run}/${RUNS} validation=${run_validation}"
-
         run_binary_once "${exe}" "${run_log}" "${run_validation}"
         rc=$?
         csv_line="$(grep '^CSV_RUN,' "${run_log}" | tail -1 || true)"
@@ -426,6 +581,8 @@ EOF_CSV
             run_failed_count=$((run_failed_count + 1))
         fi
 
+        log_run_result "${run}" "${status}" "${metric_name}" "${metric_value}" "${time_sec}" "${actual_threads}" "${run_validation}" "${kernel_return}" "${failure_stage}" "${worker_placement}"
+
         printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "$(date +%Y-%m-%dT%H:%M:%S)" "${MODE}" "$(csv_quote "${baseline}")" "$(csv_quote "${family}")" "$(csv_quote "${kernel}")" \
             "${tile_shape}" "${zvl}" "${lmul}" "${unroll}" "${kind}" "${CORE_GROUP}" "${OMP_NUM_THREADS}" "${actual_threads}" \
@@ -435,8 +592,11 @@ EOF_CSV
     done
 done < <(find "${PROJECT_ROOT}" -type f -name Makefile -print0 | sort -z)
 
-cp "${RAW_CSV}" "${SCRIPT_DIR}/openmp_raw_latest_${MODE}.csv"
-cp "${LIVE_LOG}" "${SCRIPT_DIR}/openmp_live_latest_${MODE}.log"
+write_summary_csv
+
+cp "${RAW_CSV}" "${RESULT_ROOT}/openmp_raw_latest_${MODE}.csv"
+cp "${SUMMARY_CSV}" "${RESULT_ROOT}/openmp_summary_latest_${MODE}.csv"
+cp "${LIVE_LOG}" "${RESULT_ROOT}/openmp_live_latest_${MODE}.log"
 
 log "============================================================"
 log "DONE"
@@ -445,7 +605,10 @@ log "ok_runs=${ok_count}"
 log "failed_runs=${run_failed_count}"
 log "build_failed=${build_failed_count}"
 log "Raw CSV: ${RAW_CSV}"
-log "Latest CSV: ${SCRIPT_DIR}/openmp_raw_latest_${MODE}.csv"
+log "Summary CSV: ${SUMMARY_CSV}"
+log "Latest raw CSV: ${RESULT_ROOT}/openmp_raw_latest_${MODE}.csv"
+log "Latest summary CSV: ${RESULT_ROOT}/openmp_summary_latest_${MODE}.csv"
+log "Latest live log: ${RESULT_ROOT}/openmp_live_latest_${MODE}.log"
 log "Raw logs: ${RAW_LOG_DIR}"
 log "============================================================"
 

@@ -5,7 +5,7 @@ set -euo pipefail
 # FP64, FP32, INT8 RVV, IME, and mixed wrapper builds still link cleanly.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUNNER="${SCRIPT_DIR}/run_all_openmp_kernels.sh"
+RUNNER="${SCRIPT_DIR}/run_openmp_tiled_gemm_mode.sh"
 
 M="${M:-128}"
 N="${N:-128}"

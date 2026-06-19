@@ -522,3 +522,4 @@ int main(int argc, char **argv)
     free(worker_b_tile);
     return run_failed ? 1 : 0;
 }
+
