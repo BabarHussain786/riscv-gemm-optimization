@@ -38,118 +38,123 @@ typedef long BLASLONG;
 typedef double FLOAT;
 
 int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, FLOAT alpha, FLOAT *A, FLOAT *B, FLOAT *C, BLASLONG ldc)
+
+/* M N K used for Matrix size - 
+A and B are input Matrix Panel    
+C used for Out matrix panel
+
+C = C + alpha * (A x B) If alpha = 1, normal result is added. If alpha = 0.5, half of the result is added.
+
+ldc is the stride used to locate elements of C
+C(i,j) is stored at C[j * ldc + i]
+So ldc tells how far column j is from column j+1 in memory.
+*/
+
+
 {
-    BLASLONG gvl = 0;
-    BLASLONG m_top = 0;
-    BLASLONG n_top = 0;
+    BLASLONG gvl = 0;   /* temporary value; later set by RVV, e.g. vsetvl(...) */
+    BLASLONG m_top = 0; /* start from row 0 */
+    BLASLONG n_top = 0; /* start from column 0 */
+
 
     if (K <= 0) {
         return 0;
-    }
+    } if (K <= 0) return 0;
+
+    /* If K is zero or negative, there is no A x B multiplication to do, so the kernel exits. */
+
 
     if (__riscv_vsetvl_e64m1(8) < 8) {
         return -1;
     }
 
-    /* Kernel section: main vectorized tile pass
+    /*  The kernel asks RVV: "Can I process 8 FP64 values at once with LMUL1?"
+        If hardware cannot provide 8 lanes, the kernel returns error -1. 
+
+        Kernel asks: can RVV give me 8 FP64 lanes?
+        Hardware says: no, fewer than 8 lanes.
+        Kernel returns -1 = unsupported vector configuration.
+    
+    
+    Kernel section: main vectorized tile pass
 
      * Iterates over full tiles and keeps the hot K loop in RVV vector registers.
 
      */
-    for (BLASLONG j = 0; j < N / 4; j += 1) {
-        m_top = 0;
-        BLASLONG gvl = __riscv_vsetvl_e64m1(8);
+    for (BLASLONG j = 0; j < N / 4; j += 1) {   
+
+    /* This loop moves across matrix C in groups of 4 columns.
+
+        Because the kernel is 8x4:
+        - 8 rows
+        - 4 columns
+
+        So N / 4 means:
+        how many 4-column blocks exist in the output matrix C. */ 
+
+        m_top = 0;  /* start from row 0 for this column block */ 
+
+        BLASLONG gvl = __riscv_vsetvl_e64m1(8); /* ask RVV to use 8 FP64 values in one vector register with LMUL1 */
 
         for (BLASLONG i = 0; i < M / 8; i += 1) {
-            BLASLONG ai = m_top * K;
-            BLASLONG bi = n_top * K;
-            double B0 = B[bi + 0];
-            double B1 = B[bi + 1];
-            double B2 = B[bi + 2];
-            double B3 = B[bi + 3];
-            bi += 4;
+            
+           /* This loop moves down matrix C in groups of 8 rows.
 
-            vfloat64m1_t A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);
-            ai += 8;
-
-            vfloat64m1_t result0 = __riscv_vfmul_vf_f64m1(A0, B0, gvl);
-            vfloat64m1_t result1 = __riscv_vfmul_vf_f64m1(A0, B1, gvl);
-            vfloat64m1_t result2 = __riscv_vfmul_vf_f64m1(A0, B2, gvl);
-            vfloat64m1_t result3 = __riscv_vfmul_vf_f64m1(A0, B3, gvl);
-
-#pragma GCC unroll 1
-            for (BLASLONG k = 1; k < K; k++) {
-                B0 = B[bi + 0];
-                B1 = B[bi + 1];
-                B2 = B[bi + 2];
-                B3 = B[bi + 3];
-                bi += 4;
-
-                A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);
-                ai += 8;
-
-                result0 = __riscv_vfmacc_vf_f64m1(result0, B0, A0, gvl);
-                result1 = __riscv_vfmacc_vf_f64m1(result1, B1, A0, gvl);
-                result2 = __riscv_vfmacc_vf_f64m1(result2, B2, A0, gvl);
-                result3 = __riscv_vfmacc_vf_f64m1(result3, B3, A0, gvl);
-            }
-
-            BLASLONG ci = n_top * ldc + m_top;
-
-            vfloat64m1_t c0 = __riscv_vle64_v_f64m1(&C[ci], gvl);
-            ci += ldc - gvl * 0;
-            vfloat64m1_t c1 = __riscv_vle64_v_f64m1(&C[ci], gvl);
-            ci += ldc - gvl * 0;
-            vfloat64m1_t c2 = __riscv_vle64_v_f64m1(&C[ci], gvl);
-            ci += ldc - gvl * 0;
-            vfloat64m1_t c3 = __riscv_vle64_v_f64m1(&C[ci], gvl);
-            c0 = __riscv_vfmacc_vf_f64m1(c0, alpha, result0, gvl);
-            c1 = __riscv_vfmacc_vf_f64m1(c1, alpha, result1, gvl);
-            c2 = __riscv_vfmacc_vf_f64m1(c2, alpha, result2, gvl);
-            c3 = __riscv_vfmacc_vf_f64m1(c3, alpha, result3, gvl);
-
-            ci = n_top * ldc + m_top;
-
-            __riscv_vse64_v_f64m1(&C[ci], c0, gvl);
-            ci += ldc - gvl * 0;
-            __riscv_vse64_v_f64m1(&C[ci], c1, gvl);
-            ci += ldc - gvl * 0;
-            __riscv_vse64_v_f64m1(&C[ci], c2, gvl);
-            ci += ldc - gvl * 0;
-            __riscv_vse64_v_f64m1(&C[ci], c3, gvl);
-            m_top += 8;
+            Because the kernel is 8x4:
+            - outer loop selects 4 columns
+            - inner loop selects 8 rows */
         }
+
+
+
+
 
         /* Kernel section: boundary cleanup for remaining rows in the main tile pass. */
 
         if (M & 4) {
             gvl = __riscv_vsetvl_e64m1(4);
 
-            BLASLONG ai = m_top * K;
-            BLASLONG bi = n_top * K;
-            double B0 = B[bi + 0];
+            BLASLONG ai = m_top * K;     /*  starting position of the current 8-row block in A */
+            BLASLONG bi = n_top * K;     /*  starting position of the current 4-column block in B */
+
+            double B0 = B[bi + 0];       /*  load 4 values from B for the current tile */
             double B1 = B[bi + 1];
             double B2 = B[bi + 2];
             double B3 = B[bi + 3];
-            bi += 4;
+            bi += 4;                    /*  move B pointer forward by 4 values */
 
-            vfloat64m1_t A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);
-            ai += 4;
 
-            vfloat64m1_t result0 = __riscv_vfmul_vf_f64m1(A0, B0, gvl);
-            vfloat64m1_t result1 = __riscv_vfmul_vf_f64m1(A0, B1, gvl);
+
+
+
+
+            vfloat64m1_t A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);   /* This loads FP64 values from matrix A into one RVV vector A0 */
+            ai += 4;   /* move the A index forward by 4 values for the next load/block */
+
+           
+            vfloat64m1_t result0 = __riscv_vfmul_vf_f64m1(A0, B0, gvl);    /* vfmul  = vector floating-point multiply  */
+            vfloat64m1_t result1 = __riscv_vfmul_vf_f64m1(A0, B1, gvl);   /*   vf     = vector × scalar floating-point operation */
+
             vfloat64m1_t result2 = __riscv_vfmul_vf_f64m1(A0, B2, gvl);
-            vfloat64m1_t result3 = __riscv_vfmul_vf_f64m1(A0, B3, gvl);
+            vfloat64m1_t result3 = __riscv_vfmul_vf_f64m1(A0, B3, gvl); /* multiplies the 8-row vector from A by the first value B0 of the current B column group, 
+            producing result0, which is the contribution to column 0 of the current 8x4 C tile. */
 
-            for (BLASLONG k = 1; k < K; k++) {
-                B0 = B[bi + 0];
+            
+
+            for (BLASLONG k = 1; k < K; k++) {       /* This loop continues the dot-product over the K dimension. */
+                B0 = B[bi + 0];                     /* load the next 4 B values for the 4 output columns */
                 B1 = B[bi + 1];
                 B2 = B[bi + 2];
                 B3 = B[bi + 3];
-                bi += 4;
+                bi += 4;                            /* move to the next B group */
 
-                A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);
-                ai += 4;
+                A0 = __riscv_vle64_v_f64m1(&A[ai + 0 * gvl], gvl);   /*  load the next group of A row values */
+                ai += 4;                                            /* move A pointer forward for the next k step */
+
+
+                /* Meaning:
+                for every k, the kernel loads one A vector and four B values,
+                then adds their products into the same 8x4 C tile. */
 
                 result0 = __riscv_vfmacc_vf_f64m1(result0, B0, A0, gvl);
                 result1 = __riscv_vfmacc_vf_f64m1(result1, B1, A0, gvl);
@@ -157,7 +162,7 @@ int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
                 result3 = __riscv_vfmacc_vf_f64m1(result3, B3, A0, gvl);
             }
 
-            BLASLONG ci = n_top * ldc + m_top;
+            BLASLONG ci = n_top * ldc + m_top;   /* starting memory position of the current C tile */
 
             vfloat64m1_t c0 = __riscv_vle64_v_f64m1(&C[ci], gvl);
             ci += ldc - gvl * 0;
@@ -165,13 +170,19 @@ int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
             ci += ldc - gvl * 0;
             vfloat64m1_t c2 = __riscv_vle64_v_f64m1(&C[ci], gvl);
             ci += ldc - gvl * 0;
-            vfloat64m1_t c3 = __riscv_vle64_v_f64m1(&C[ci], gvl);
-            c0 = __riscv_vfmacc_vf_f64m1(c0, alpha, result0, gvl);
+            vfloat64m1_t c3 = __riscv_vle64_v_f64m1(&C[ci], gvl);   /* c0 = __riscv_vle64_v_f64m1(&C[ci], gvl); loads the first column vector of the current C tile from memory, 
+                                                                      and ci += ldc - gvl * 0; moves the C index to the next column; 
+                                                                      since gvl * 0 = 0, this is simply ci += ldc. */
+
+
+
+            c0 = __riscv_vfmacc_vf_f64m1(c0, alpha, result0, gvl);           
             c1 = __riscv_vfmacc_vf_f64m1(c1, alpha, result1, gvl);
             c2 = __riscv_vfmacc_vf_f64m1(c2, alpha, result2, gvl);
-            c3 = __riscv_vfmacc_vf_f64m1(c3, alpha, result3, gvl);
+            c3 = __riscv_vfmacc_vf_f64m1(c3, alpha, result3, gvl);  /* c0 = __riscv_vfmacc_vf_f64m1(c0, alpha, result0, gvl); updates the first column vector 
+                                                                    of the current 8x4 C tile by computing c0 = c0 + alpha * result0 for all gvl FP64 rows in parallel.  */
 
-            ci = n_top * ldc + m_top;
+            ci = n_top * ldc + m_top;           /*  ci = n_top * ldc + m_top; finds the start position of the current C tile in memory. */
 
             __riscv_vse64_v_f64m1(&C[ci], c0, gvl);
             ci += ldc - gvl * 0;
@@ -180,8 +191,15 @@ int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
             __riscv_vse64_v_f64m1(&C[ci], c2, gvl);
             ci += ldc - gvl * 0;
             __riscv_vse64_v_f64m1(&C[ci], c3, gvl);
-            m_top += 4;
+            m_top += 4;                     /*  __riscv_vse64_v_f64m1(&C[ci], c3, gvl); 
+                                                stores the updated fourth column vector of the current C tile back to memory, 
+                                                and m_top += 4; moves to the next row block. */
         }
+
+
+        /* This handles leftover rows that do not fit into the main 8x4 vector tile.
+        If 2 rows remain, it computes a scalar 2x4 tile; if 1 row remains, it computes a scalar 1x4 tile.
+        Then it updates C = C + alpha * result and moves to the next 4-column block. */
 
         if (M & 2) {
             double result0 = 0;
@@ -219,6 +237,12 @@ int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
             C[ci + 3 * ldc + 1] += alpha * result7;
             m_top += 2;
         }
+
+
+        /* This part finishes the leftover matrix edges that do not fit the main 8x4 tile.
+         * If 1 row remains, it computes a scalar 1x4 tile; if 2 columns remain, it computes 8x2, 4x2, and 2x2 cleanup tiles.
+         * This ensures every row and column of C is updated, not only the full 8x4 blocks.
+         */ 
 
         if (M & 1) {
             double result0 = 0;
@@ -293,6 +317,12 @@ int dgemm_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K, F
             __riscv_vse64_v_f64m1(&C[ci], c1, gvl);
             m_top += 8;
         }
+
+
+        /* This part finishes the remaining columns after the main 8x4 tiles.
+        If N & 2, it computes the leftover 2 columns using 8x2, 4x2, 2x2, and 1x2 cleanup blocks.
+        If N & 1, it computes the final 1 column using 8x1, 4x1, 2x1, and 1x1 cleanup blocks.  */
+
 
         if (M & 4) {
             gvl = __riscv_vsetvl_e64m1(4);

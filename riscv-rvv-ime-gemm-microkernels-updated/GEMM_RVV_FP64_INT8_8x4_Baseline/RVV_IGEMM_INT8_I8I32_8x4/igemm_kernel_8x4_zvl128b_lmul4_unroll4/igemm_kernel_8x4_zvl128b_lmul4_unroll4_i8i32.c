@@ -49,6 +49,31 @@ typedef vint8m4_t input_i8_t;
 #define INPUT_VLE8(p, vl) __riscv_vle8_v_i8m4(p, vl)
 #define INPUT_STORE(p, v, vl) __riscv_vse8_v_i8m4(p, v, vl)
 
+static inline BLASLONG packed_row_block(BLASLONG left)
+{
+    if (left >= 8) return 8;
+    if (left >= 4) return 4;
+    if (left >= 2) return 2;
+    return 1;
+}
+
+static void scalar_packed_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
+                                GEMM_I32 alpha, const GEMM_I8 *Ablk,
+                                const GEMM_I8 *Bblk, GEMM_I32 *Cblk,
+                                BLASLONG ldc)
+{
+    for (BLASLONG c = 0; c < cols; ++c) {
+        for (BLASLONG r = 0; r < rows; ++r) {
+            int64_t sum = 0;
+#pragma GCC unroll 1
+            for (BLASLONG k = 0; k < K; ++k) {
+                sum += (GEMM_I32)Ablk[k * rows + r] *
+                       (GEMM_I32)Bblk[k * cols + c];
+            }
+            Cblk[c * ldc + r] += alpha * (GEMM_I32)sum;
+        }
+    }
+}
 static inline void scatter_8x4(BLASLONG n_top, BLASLONG m_top, GEMM_I32 alpha,
                                GEMM_I32 *C, BLASLONG ldc,
                                const GEMM_I32 out0[8], const GEMM_I32 out1[8],
@@ -218,35 +243,29 @@ int igemm_kernel_8x4_zvl128b_lmul4_unroll4_i8i32(
 
     if (N & 2) {
         m_top = 0;
-        for (BLASLONG i = 0; i < M; ++i) {
-            GEMM_I32 s0 = 0, s1 = 0;
-            BLASLONG ai = i * K;
-            BLASLONG bi = n_top * K;
-#pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; ++k) {
-                s0 += (GEMM_I32)A[ai + k] * (GEMM_I32)B[bi + 0];
-                s1 += (GEMM_I32)A[ai + k] * (GEMM_I32)B[bi + 1];
-                bi += 2;
-            }
-            C[n_top * ldc + i] += alpha * s0;
-            C[(n_top + 1) * ldc + i] += alpha * s1;
+        while (m_top < M) {
+            BLASLONG rows = packed_row_block(M - m_top);
+            scalar_packed_block(rows, 2, K, alpha,
+                                &A[m_top * K],
+                                &B[n_top * K],
+                                &C[n_top * ldc + m_top],
+                                ldc);
+            m_top += rows;
         }
         n_top += 2;
     }
 
     if (N & 1) {
-        for (BLASLONG i = 0; i < M; ++i) {
-            GEMM_I32 s0 = 0;
-            BLASLONG ai = i * K;
-            BLASLONG bi = n_top * K;
-#pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; ++k) {
-                s0 += (GEMM_I32)A[ai + k] * (GEMM_I32)B[bi];
-                bi += 1;
-            }
-            C[n_top * ldc + i] += alpha * s0;
+        m_top = 0;
+        while (m_top < M) {
+            BLASLONG rows = packed_row_block(M - m_top);
+            scalar_packed_block(rows, 1, K, alpha,
+                                &A[m_top * K],
+                                &B[n_top * K],
+                                &C[n_top * ldc + m_top],
+                                ldc);
+            m_top += rows;
         }
     }
-
     return 0;
 }

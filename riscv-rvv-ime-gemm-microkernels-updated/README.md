@@ -21,8 +21,8 @@ VMADOT tiles and K3/A100 uses native `8x16x8` VMADOT tiles. The public folder
 layout stays compact while each board executes its correct private packing and
 write-back path.
 
-Each native family contains the original `zvl128b` and `zvl256b`, `lmul1` and
-`lmulmf2`, and unroll `1`, `2`, `4`, and `8` variants. The public SpacemiT
+Each native family is kept as a zvl128b-only kernel set, with lmul1 and
+lmulmf2, and unroll 1, 2, 4, and 8 variants. The public SpacemiT
 documentation describes `LMUL=1`; therefore, `lmulmf2` rows are retained only
 as explicit experimental target-board measurements. Default benchmarks skip
 them. Enable them only after a board-specific capability check:

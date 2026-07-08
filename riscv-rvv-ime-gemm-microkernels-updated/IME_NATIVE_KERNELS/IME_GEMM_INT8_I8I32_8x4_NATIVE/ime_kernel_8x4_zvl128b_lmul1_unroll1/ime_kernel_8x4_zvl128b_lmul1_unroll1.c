@@ -5,6 +5,13 @@
  *
  * SpacemiT IME INT8 GEMM microkernel: ime_kernel_8x4_zvl128b_lmul1_unroll1
  *
+ * Child-friendly view:
+ *   This kernel multiplies INT8 values from A and B.
+ *   It adds the products into INT32 values in C.
+ *   Fast path: use native IME hardware on IME-capable cores.
+ *   Fallback path: use RVV, then scalar C if needed.
+ *   Main software tile: 8 rows by 4 columns of output C.
+ *
  * Mathematical operation:
  *   C += alpha * (A x B)
  *   A and B contain signed INT8 values. C contains INT32 values.
@@ -26,6 +33,14 @@
  *   The matching rvv_fallback.c remains local to this kernel folder.
  *   SPACEMIT_IME_REQUIRE_HARDWARE disables fallback during accuracy testing.
  */
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 0: Build environment and public contract
+ * -----------------------------------------------------------------------------
+ * This first part only prepares the file: headers, compile-time feature checks,
+ * constants, and the public RVV fallback symbol. Nothing is computed yet.
+ */
+/* Enable GNU/Linux helpers such as CPU affinity functions. */
 #define _GNU_SOURCE
 
 #include <sched.h>
@@ -36,96 +51,175 @@
 #include <string.h>
 #include <sys/stat.h>
 
+/* Check at compile time whether this build has RISC-V vector support. */
 #if defined(__riscv) && defined(__riscv_vector)
 #define SPACEMIT_IME_HAS_RVV 1
 #else
 #define SPACEMIT_IME_HAS_RVV 0
 #endif
 
+/* Keep native IME path enabled for this kernel. */
 #define SPACEMIT_IME_NATIVE_ENABLED 1
 
+/* OpenBLAS-style integer type used for matrix sizes and strides. */
 typedef long BLASLONG;
 
+/* This variant uses unroll factor 1 in the K loop. */
 #define UNROLL_K 1
 
 enum {
+    /* Number of C rows handled by the kernel code tile. */
     IME_MR = 8,
+
+    /* Number of C columns handled by the kernel code tile. */
     IME_NR = 4,
+
+    /* Packed panels are aligned to 64 bytes for hardware-friendly access. */
     IME_ALIGNMENT = 64,
+
+    /* Maximum temporary output values produced by native IME profiles. */
     IME_MAX_OUTPUT_VALUES = 64
 };
 
+/* Which native IME hardware shape is available on the current core. */
 typedef enum ime_profile {
     IME_PROFILE_NONE = 0,
     IME_PROFILE_A60,
     IME_PROFILE_A100
 } ime_profile;
 
+/* External RVV INT8 kernel used when native IME is not selected. */
 int igemm_kernel_8x4_zvl128b_lmul1_unroll1_i8i32(BLASLONG M, BLASLONG N, BLASLONG K,
                       int32_t alpha, int8_t *A, int8_t *B,
                       int32_t *C, BLASLONG ldc);
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 1: Small safety helpers
+ * -----------------------------------------------------------------------------
+ * These helpers keep integer behavior, allocation sizes, and environment flags
+ * predictable before any GEMM work starts.
+ */
+/* Reinterpret signed INT32 bits as unsigned bits without changing the bit pattern. */
 static uint32_t u32_from_i32(int32_t x)
 {
+    /* y receives the same 32 bits as x, only viewed as unsigned. */
     uint32_t y;
+    /* memcpy avoids undefined behavior from direct signed/unsigned aliasing. */
     memcpy(&y, &x, sizeof(y));
+    /* Return the unchanged bit pattern. */
     return y;
 }
 
+/* Reinterpret unsigned bits back as signed INT32. */
 static int32_t i32_from_u32(uint32_t x)
 {
+    /* y receives the same 32 bits as x, only viewed as signed. */
     int32_t y;
+    /* memcpy keeps the conversion as a pure bit reinterpretation. */
     memcpy(&y, &x, sizeof(y));
+    /* Return the unchanged bit pattern. */
     return y;
 }
 
+/* Add alpha*value into C with normal 32-bit wraparound behavior. */
 static int32_t add_scaled_wrap_i32(int32_t dst, int64_t value, int32_t alpha)
 {
+    /* First scale the computed dot product by alpha. */
     uint32_t scaled = (uint32_t)((int64_t)alpha * value);
+    /* Then add it to the old C value with exact 32-bit wraparound. */
     return i32_from_u32(u32_from_i32(dst) + scaled);
 }
 
+/* Safely multiply two sizes before allocating memory. */
 static int size_mul_ok(size_t a, size_t b, size_t *out)
 {
+    /* Refuse the multiplication if it would overflow size_t. */
     if (a != 0 && b > SIZE_MAX / a) return 0;
+    /* Store the safe product for later allocation. */
     *out = a * b;
+    /* Return success. */
     return 1;
 }
 
+/* Allocate memory aligned to 64 bytes for packed A/B panels. */
 static void *aligned_alloc_bytes(size_t bytes)
 {
+    /* ptr will point to the aligned memory block. */
     void *ptr = NULL;
+    /* padded is bytes rounded up to the next alignment boundary. */
     size_t padded;
 
+    /* Reject zero-size and overflow-prone requests. */
     if (bytes == 0 || bytes > SIZE_MAX - (IME_ALIGNMENT - 1)) return NULL;
+    /* Round the allocation size up to 64-byte alignment. */
     padded = (bytes + IME_ALIGNMENT - 1) & ~(size_t)(IME_ALIGNMENT - 1);
+    /* Ask the OS/runtime for aligned memory. */
     if (posix_memalign(&ptr, IME_ALIGNMENT, padded) != 0) return NULL;
+    /* Return the aligned buffer to the caller. */
     return ptr;
 }
 
+/*
+ * Optional runtime switches for validation:
+ *   SPACEMIT_IME_FORCE_NATIVE=1  -> require native IME path, return error if unavailable.
+ *   SPACEMIT_IME_FORCE_RVV=1     -> use the RVV fallback path.
+ *   SPACEMIT_IME_FORCE_SCALAR=1  -> use the plain scalar reference path.
+ */
+static int env_flag_enabled(const char *name)
+{
+    /* Read the environment variable by name. */
+    const char *value = getenv(name);
+    /* Missing or empty means disabled. */
+    if (value == NULL || value[0] == '\0') return 0;
+    /* 0/no/No means disabled. Any other value means enabled. */
+    if (value[0] == '0' || value[0] == 'n' || value[0] == 'N') return 0;
+    /* The flag is enabled. */
+    return 1;
+}
+
+/* Choose how many leftover rows can be handled by fallback packing. */
 static BLASLONG pick_row_block(BLASLONG left)
 {
+    /* Prefer the largest row block still available. */
     if (left >= 8) return 8;
+    /* If 8 rows are not left, try 4 rows. */
     if (left >= 4) return 4;
+    /* If 4 rows are not left, try 2 rows. */
     if (left >= 2) return 2;
+    /* Last case: only 1 row remains. */
     return 1;
 }
 
+/* Choose how many leftover columns can be handled by fallback packing. */
 static BLASLONG pick_col_block(BLASLONG left)
 {
+    /* Prefer the main 4-column block. */
     if (left >= IME_NR) return IME_NR;
+    /* Keep this fallback generic if IME_NR changes. */
     if (left >= 4) return 4;
+    /* Handle a 2-column tail if present. */
     if (left >= 2) return 2;
+    /* Last case: only 1 column remains. */
     return 1;
 }
 
+/*
+ * Small plain-C GEMM block.
+ * Used for fallback and leftover edges.
+ * Simple formula for every output cell:
+ *   C(row,col) = C(row,col) + alpha * sum_k A(row,k) * B(k,col)
+ */
 static void scalar_gemm_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
                               int32_t alpha, const int8_t *A, BLASLONG lda,
                               const int8_t *B, BLASLONG ldb,
                               int32_t *C, BLASLONG ldc)
 {
+    /* Walk over each output column in this small scalar block. */
     for (BLASLONG c = 0; c < cols; ++c) {
+        /* Walk over each output row in that column. */
         for (BLASLONG r = 0; r < rows; ++r) {
+            /* sum holds the dot product before it is added into INT32 C. */
             int64_t sum = 0;
 
 #pragma GCC unroll 1
@@ -133,11 +227,18 @@ static void scalar_gemm_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
                 sum += (int32_t)A[k * lda + r] * (int32_t)B[k * ldb + c];
             }
 
+            /* Store the final contribution back into C(row,column). */
             C[c * ldc + r] = add_scaled_wrap_i32(C[c * ldc + r], sum, alpha);
         }
     }
 }
 
+/*
+ * Roadmap note:
+ * The scalar block above is the simplest version of the math. It is slower, but
+ * it is easy to trust because it directly computes each C(row,column) dot product.
+ */
+/* Full scalar GEMM fallback for the whole matrix. Slow but always valid. */
 static int scalar_gemm_full(BLASLONG M, BLASLONG N, BLASLONG K,
                             int32_t alpha, const int8_t *A, const int8_t *B,
                             int32_t *C, BLASLONG ldc)
@@ -146,10 +247,24 @@ static int scalar_gemm_full(BLASLONG M, BLASLONG N, BLASLONG K,
     return 0;
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 2: RVV fallback path
+ * -----------------------------------------------------------------------------
+ * If this thread is not running on an IME-capable core, this path keeps the same
+ * INT8 x INT8 -> INT32 math but uses the RVV INT8 micro-kernel instead.
+ *
+ * Flow:
+ *   1. Allocate packed A and B buffers.
+ *   2. Copy column-major BLAS input data into the RVV kernel layout.
+ *   3. Call the RVV INT8 kernel.
+ *   4. If RVV fails, use the scalar reference path.
+ */
 static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
                              int32_t alpha, const int8_t *A, const int8_t *B,
                              int32_t *C, BLASLONG ldc)
 {
+    /* During strict hardware-only testing, fallback can be disabled. */
 #if defined(SPACEMIT_IME_REQUIRE_HARDWARE)
     (void)M; (void)N; (void)K; (void)alpha;
     (void)A; (void)B; (void)C; (void)ldc;
@@ -163,12 +278,15 @@ static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
     BLASLONG n_top = 0;
     int rc;
 
+    /* Calculate packed A and B sizes safely. */
     if (!size_mul_ok((size_t)M, (size_t)K, &a_bytes) ||
         !size_mul_ok((size_t)N, (size_t)K, &b_bytes)) {
         return scalar_gemm_full(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* Allocate packed A buffer for RVV fallback. */
     A_pack = (int8_t *)aligned_alloc_bytes(a_bytes);
+    /* Allocate packed B buffer for RVV fallback. */
     B_pack = (int8_t *)aligned_alloc_bytes(b_bytes);
     if (A_pack == NULL || B_pack == NULL) {
         free(A_pack);
@@ -176,26 +294,33 @@ static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
         return scalar_gemm_full(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* Pack A by row blocks so the RVV fallback kernel can read it easily. */
     while (m_top < M) {
         BLASLONG rows = pick_row_block(M - m_top);
         for (BLASLONG k = 0; k < K; ++k) {
+            /* Walk over the rows inside this packed A block. */
             for (BLASLONG r = 0; r < rows; ++r) {
+                /* Copy A(k,row) from original layout into packed layout. */
                 A_pack[m_top * K + k * rows + r] = A[k * M + m_top + r];
             }
         }
         m_top += rows;
     }
 
+    /* Pack B by column blocks so the RVV fallback kernel can read it easily. */
     while (n_top < N) {
         BLASLONG cols = pick_col_block(N - n_top);
         for (BLASLONG k = 0; k < K; ++k) {
+            /* Walk over the columns inside this packed B block. */
             for (BLASLONG c = 0; c < cols; ++c) {
+                /* Copy B(k,column) from original layout into packed layout. */
                 B_pack[n_top * K + k * cols + c] = B[k * N + n_top + c];
             }
         }
         n_top += cols;
     }
 
+    /* Call the RVV INT8 fallback kernel using packed A and B. */
     rc = igemm_kernel_8x4_zvl128b_lmul1_unroll1_i8i32(M, N, K, alpha, A_pack, B_pack, C, ldc);
     free(A_pack);
     free(B_pack);
@@ -204,11 +329,21 @@ static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
 #endif
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 3: Core selection for native IME
+ * -----------------------------------------------------------------------------
+ * Native IME instructions should run only on IME-capable cores. This block checks
+ * the Linux CPU/device-tree information, temporarily pins the thread to a valid
+ * core, and restores the original affinity at the end.
+ */
+/* Saves/restores CPU affinity while trying to run on an IME-capable core. */
 typedef struct ime_affinity_guard {
     cpu_set_t saved_mask;
     int active;
 } ime_affinity_guard;
 
+/* Check Linux device-tree marker to see whether this CPU has AI/IME support. */
 static int cpu_has_ime(int cpu)
 {
     char marker[128];
@@ -223,6 +358,7 @@ static int cpu_has_ime(int cpu)
     return stat(marker, &st) == 0;
 }
 
+/* Try to pin the current thread to an IME-capable CPU before native IME use. */
 static int ime_affinity_guard_enter(ime_affinity_guard *guard)
 {
 #if SPACEMIT_IME_HAS_RVV
@@ -264,6 +400,7 @@ static int ime_affinity_guard_enter(ime_affinity_guard *guard)
 #endif
 }
 
+/* Restore the original CPU affinity after native IME work finishes. */
 static void ime_affinity_guard_leave(ime_affinity_guard *guard)
 {
     if (guard->active) {
@@ -271,6 +408,15 @@ static void ime_affinity_guard_leave(ime_affinity_guard *guard)
     }
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 4: Detect native IME tile shape
+ * -----------------------------------------------------------------------------
+ * The same source can support different IME profiles. On K1/VLEN=256, the useful
+ * profile is A60, where one native IME instruction group computes a 4x4 output
+ * tile from A(4x8) and B(8x4).
+ */
+/* Detect whether the current IME behaves like A60 or A100 profile. */
 static ime_profile detect_ime_profile(void)
 {
 #if SPACEMIT_IME_HAS_RVV && SPACEMIT_IME_NATIVE_ENABLED
@@ -289,38 +435,62 @@ static ime_profile detect_ime_profile(void)
     return IME_PROFILE_NONE;
 }
 
+/* K chunk size used by the native IME dot primitive. */
 static BLASLONG profile_kr(ime_profile profile)
 {
     return profile == IME_PROFILE_A100 ? 16 : 8;
 }
 
+/* Native hardware row count for one IME primitive. */
 static BLASLONG profile_native_rows(ime_profile profile)
 {
     return profile == IME_PROFILE_A100 ? 8 : 4;
 }
 
+/* Native hardware column count for one IME primitive. */
 static BLASLONG profile_native_cols(ime_profile profile)
 {
     return profile_native_rows(profile);
 }
 
+/* Number of bytes needed to pack one B panel for native IME. */
 static size_t b_panel_bytes(ime_profile profile, BLASLONG K_main)
 {
     BLASLONG cols = profile == IME_PROFILE_A100 ? 8 : IME_NR;
     return (size_t)cols * (size_t)K_main;
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 5: Pack BLAS matrices into IME tile layout
+ * -----------------------------------------------------------------------------
+ * The caller gives A and B in BLAS/Fortran-style column-major layout. The IME
+ * instruction does not read that layout directly, so these functions create small
+ * packed panels in the exact order the hardware dot-product instruction expects.
+ */
+/*
+ * Pack one 8-row A panel into the order expected by IME.
+ * Child view: take the needed A values from the big A matrix and place them
+ * in a small clean row/column order for the hardware instruction.
+ */
 static void pack_a_panel(ime_profile profile, const int8_t *A,
                          BLASLONG m_top, BLASLONG M, BLASLONG K_main,
                          int8_t *dst)
 {
+    /* kr is the K depth consumed by one native IME dot step. */
     BLASLONG kr = profile_kr(profile);
+    /* native_rows is 4 on K1/A60 and 8 on A100. */
     BLASLONG native_rows = profile_native_rows(profile);
 
+    /* Move through K in native IME chunks. */
     for (BLASLONG kb = 0; kb < K_main; kb += kr) {
+        /* Move through the 8 software rows in native row groups. */
         for (BLASLONG rb = 0; rb < IME_MR; rb += native_rows) {
+            /* Pick one row inside the native IME row group. */
             for (BLASLONG r = 0; r < native_rows; ++r) {
+                /* Pick one K value inside the current native K chunk. */
                 for (BLASLONG kk = 0; kk < kr; ++kk) {
+                    /* Copy one A value into the packed IME A panel. */
                     *dst++ = A[(kb + kk) * M + m_top + rb + r];
                 }
             }
@@ -328,19 +498,28 @@ static void pack_a_panel(ime_profile profile, const int8_t *A,
     }
 }
 
+/* Pack one 4-column B panel into the order expected by IME. */
 static void pack_b_panel(ime_profile profile, const int8_t *B,
                          BLASLONG n_top, BLASLONG N, BLASLONG K_main,
                          int8_t *dst)
 {
+    /* kr is the K depth consumed by one native IME dot step. */
     BLASLONG kr = profile_kr(profile);
+    /* native_cols is 4 on K1/A60 and 8 on A100. */
     BLASLONG native_cols = profile_native_cols(profile);
+    /* A100 packs 8 columns; A60 only needs the 4 columns of this kernel. */
     BLASLONG packed_cols = profile == IME_PROFILE_A100 ? 8 : IME_NR;
 
+    /* Move through K in native IME chunks. */
     for (BLASLONG kb = 0; kb < K_main; kb += kr) {
+        /* Move through B columns in native column groups. */
         for (BLASLONG cb = 0; cb < packed_cols; cb += native_cols) {
+            /* Pick one column inside the native column group. */
             for (BLASLONG c = 0; c < native_cols; ++c) {
+                /* Pick one K value inside the current native K chunk. */
                 for (BLASLONG kk = 0; kk < kr; ++kk) {
                     BLASLONG column = cb + c;
+                    /* Copy a real B value, or zero-pad extra A100 columns. */
                     *dst++ = column < IME_NR
                         ? B[(kb + kk) * N + n_top + column]
                         : 0;
@@ -350,7 +529,21 @@ static void pack_b_panel(ime_profile profile, const int8_t *B,
     }
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 6: Native IME dot-product instructions
+ * -----------------------------------------------------------------------------
+ * This is the only hardware-specific part. The inline assembly loads packed A/B
+ * panels into vector registers and executes encoded IME vmadot instructions.
+ * The surrounding C code prepares data for this block and stores its result.
+ */
 #if SPACEMIT_IME_HAS_RVV && SPACEMIT_IME_NATIVE_ENABLED
+/*
+ * One native A60 IME dot step: load packed A/B and execute encoded vmadot words.
+ * Official SpacemiT IME v1.0 model for K1-class VLEN=256 and SEW=8:
+ *   native primitive = A(4x8) x B(8x4) -> C(4x4), accumulated in INT32.
+ * This 8x4 software kernel uses two native 4x4 row halves to build one 8x4 tile.
+ */
 #define IME_A60_DOT_STEP \
         "vle8.v v16,(t2)\n\t" \
         "addi t2,t2,32\n\t" \
@@ -360,6 +553,7 @@ static void pack_b_panel(ime_profile profile, const int8_t *B,
         "addi t3,t3,32\n\t" \
         ".word 0xE348342Bu\n\t" \
         ".word 0xE348B52Bu\n\t"
+/* One native A100 IME dot step: load larger packed A/B and execute encoded vmadot word. */
 #define IME_A100_DOT_STEP \
         "vle8.v v16,(t2)\n\t" \
         "addi t2,t2,128\n\t" \
@@ -392,10 +586,19 @@ static void pack_b_panel(ime_profile profile, const int8_t *B,
 #error "Unsupported IME unroll factor"
 #endif
 
+/* Run native A60 IME accumulation and write INT32 tile results to out[]. */
 static void ime_accumulate_a60(const int8_t *A_pack, const int8_t *B_pack,
                               BLASLONG k_groups,
                               int32_t out[IME_MAX_OUTPUT_VALUES])
 {
+    /*
+     * Assembly flow for A60/K1:
+     *   1. Clear INT32 accumulators for two 4x4 row halves.
+     *   2. Loop over packed K groups.
+     *   3. Load A rows 0-3, A rows 4-7, and B columns 0-3.
+     *   4. Execute two vmadot instructions.
+     *   5. Store both 4x4 halves into out[].
+     */
     __asm__ __volatile__(
         "li t0,16\n\t"
         "vsetvli zero,t0,e32,m2,ta,ma\n\t"
@@ -427,10 +630,19 @@ static void ime_accumulate_a60(const int8_t *A_pack, const int8_t *B_pack,
         : "t0", "t1", "t2", "t3", "t4", "memory", "v8", "v9", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v20", "v21");
 }
 
+/* Run native A100 IME accumulation and write INT32 tile results to out[]. */
 static void ime_accumulate_a100(const int8_t *A_pack, const int8_t *B_pack,
                               BLASLONG k_groups,
                               int32_t out[IME_MAX_OUTPUT_VALUES])
 {
+    /*
+     * Assembly flow for A100-style IME:
+     *   1. Clear the larger INT32 accumulator tile.
+     *   2. Loop over packed K groups.
+     *   3. Load the packed A and B panels.
+     *   4. Execute the native vmadot instruction.
+     *   5. Store the native tile into out[].
+     */
     __asm__ __volatile__(
         "li t0,64\n\t"
         "vsetvli zero,t0,e32,m2,ta,ma\n\t"
@@ -460,39 +672,57 @@ static void ime_accumulate_a100(const int8_t *A_pack, const int8_t *B_pack,
 }
 #endif
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 7: Convert native IME output back to C
+ * -----------------------------------------------------------------------------
+ * IME writes the tile in its own native order. These helpers translate that order
+ * back into normal C(row,column), then add alpha * tile_result into the real C.
+ */
+/* Convert logical output position (row r, column c) to native IME out[] index. */
 static size_t output_index(ime_profile profile, int r, int c)
 {
+    /* A100 stores the native 8x8 output in simple row-major tile order. */
     if (profile == IME_PROFILE_A100) {
         return (size_t)r * 8 + (size_t)c;
     }
 
+    /* A60 stores the software 8x4 tile as two native 4x4 row halves. */
     return (size_t)(c / 4) * 32 +
            (size_t)(r / 4) * 16 +
            (size_t)(r % 4) * 4 +
            (size_t)(c % 4);
 }
 
+/* Copy native IME out[] values back into the real C matrix. */
 static void scatter_output(ime_profile profile, BLASLONG m_top, BLASLONG n_top,
                            int32_t alpha,
                            const int32_t out[IME_MAX_OUTPUT_VALUES],
                            int32_t *C, BLASLONG ldc)
 {
+    /* Visit each of the 4 output columns in the software tile. */
     for (int c = 0; c < IME_NR; ++c) {
+        /* Visit each of the 8 output rows in the software tile. */
         for (int r = 0; r < IME_MR; ++r) {
+            /* ci is the column-major address of C(m_top+r, n_top+c). */
             size_t ci = (size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r);
+            /* Add alpha times the IME result into the real C matrix. */
             C[ci] = add_scaled_wrap_i32(C[ci], out[output_index(profile, r, c)], alpha);
         }
     }
 }
 
+/* Choose A60 or A100 native accumulation based on detected hardware profile. */
 static void native_accumulate(ime_profile profile, const int8_t *A_pack,
                               const int8_t *B_pack, BLASLONG k_groups,
                               int32_t out[IME_MAX_OUTPUT_VALUES])
 {
 #if SPACEMIT_IME_HAS_RVV && SPACEMIT_IME_NATIVE_ENABLED
+    /* Use the larger A100 path only when the detected profile says so. */
     if (profile == IME_PROFILE_A100) {
         ime_accumulate_a100(A_pack, B_pack, k_groups, out);
     } else {
+        /* K1 normally lands here: A60 path with two native 4x4 halves. */
         ime_accumulate_a60(A_pack, B_pack, k_groups, out);
     }
 #else
@@ -500,6 +730,22 @@ static void native_accumulate(ime_profile profile, const int8_t *A_pack,
 #endif
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 8: Main native IME GEMM driver
+ * -----------------------------------------------------------------------------
+ * This function is the main story of the kernel:
+ *
+ *   Step 1: Validate the matrix sizes and pointers.
+ *   Step 2: Honor debug/validation environment flags.
+ *   Step 3: Move to an IME-capable core, or fall back to RVV.
+ *   Step 4: Detect the native IME profile and its K-block size.
+ *   Step 5: Split the output matrix C into full 8x4 software tiles.
+ *   Step 6: Pack A once, pack each B panel, and run native IME dot products.
+ *   Step 7: Scatter each computed tile back into column-major C.
+ *   Step 8: Use scalar cleanup for leftover K values, rows, or columns.
+ *   Step 9: Free temporary buffers and restore CPU affinity.
+ */
 static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
                          int32_t alpha, const int8_t *A, const int8_t *B,
                          int32_t *C, BLASLONG ldc)
@@ -515,32 +761,59 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
     size_t a_all_size;
     int8_t *A_all = NULL;
     int8_t *B_pack = NULL;
+    int force_native;
 
+    /* --- Step 1: basic input and environment checks ----------------------- */
+    /* Start with an empty affinity guard. */
     memset(&guard, 0, sizeof(guard));
+    /* Nothing to compute if any dimension is zero or alpha is zero. */
     if (M <= 0 || N <= 0 || K <= 0 || alpha == 0) return 0;
+    /* Reject invalid pointers or invalid C leading dimension. */
     if (A == NULL || B == NULL || C == NULL || ldc < M) return -1;
-    if (!SPACEMIT_IME_NATIVE_ENABLED || !ime_affinity_guard_enter(&guard)) {
+
+    force_native = env_flag_enabled("SPACEMIT_IME_FORCE_NATIVE");
+    if (env_flag_enabled("SPACEMIT_IME_FORCE_SCALAR")) {
+        return scalar_gemm_full(M, N, K, alpha, A, B, C, ldc);
+    }
+    if (env_flag_enabled("SPACEMIT_IME_FORCE_RVV")) {
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* --- Step 2: choose native IME or fallback execution path ------------- */
+    /* If native IME is unavailable or CPU pinning fails, use RVV fallback. */
+    if (!SPACEMIT_IME_NATIVE_ENABLED || !ime_affinity_guard_enter(&guard)) {
+        if (force_native) return -98;
+        return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
+    }
+
+    /* --- Step 3: detect hardware tile shape and full tile coverage -------- */
+    /* Detect whether this IME core has A60 or A100 style native tile shape. */
     profile = detect_ime_profile();
     if (profile == IME_PROFILE_NONE) {
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* kr is how many K values one native IME primitive consumes per step. */
     kr = profile_kr(profile);
+    /* K_main is the largest K part cleanly handled by native IME. */
     K_main = (K / (kr * UNROLL_K)) * (kr * UNROLL_K);
+    /* Number of full 8-row blocks in M. */
     m_blocks = M / IME_MR;
+    /* Number of full 4-column blocks in N. */
     n_blocks = N / IME_NR;
 
     if (K_main == 0 || m_blocks == 0 || n_blocks == 0 ||
         !size_mul_ok((size_t)IME_MR, (size_t)K_main, &a_panel_size) ||
         !size_mul_ok((size_t)m_blocks, a_panel_size, &a_all_size)) {
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* --- Step 4: allocate temporary packed panels ------------------------- */
+    /* Allocate packed storage for all full A panels and one B panel. */
     b_panel_size = b_panel_bytes(profile, K_main);
     A_all = (int8_t *)aligned_alloc_bytes(a_all_size);
     B_pack = (int8_t *)aligned_alloc_bytes(b_panel_size);
@@ -548,26 +821,39 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
         free(A_all);
         free(B_pack);
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
+    /* --- Step 5: pack A panels once --------------------------------------- */
+    /* Pre-pack every full 8-row A panel once, because A is reused for B panels. */
     for (BLASLONG mb = 0; mb < m_blocks; ++mb) {
         pack_a_panel(profile, A, mb * IME_MR, M, K_main,
                      &A_all[(size_t)mb * a_panel_size]);
     }
 
+    /* --- Step 6: compute full 8x4 output tiles ---------------------------- */
+    /* Walk over every full 4-column B/C block. */
     for (BLASLONG nb = 0; nb < n_blocks; ++nb) {
+        /* n_top is the first C/B column of this 4-column block. */
         BLASLONG n_top = nb * IME_NR;
+        /* Pack current B panel before using it with all A row blocks. */
         pack_b_panel(profile, B, n_top, N, K_main, B_pack);
 
+        /* For this B panel, compute every full 8-row C block. */
         for (BLASLONG mb = 0; mb < m_blocks; ++mb) {
+            /* m_top is the first C/A row of this 8-row block. */
             BLASLONG m_top = mb * IME_MR;
+            /* out holds the native IME INT32 tile before writing it into C. */
             int32_t out[IME_MAX_OUTPUT_VALUES] __attribute__((aligned(64)));
 
+            /* Run native IME dot product for this packed A panel and B panel. */
             native_accumulate(profile, &A_all[(size_t)mb * a_panel_size],
                               B_pack, K_main / (kr * UNROLL_K), out);
+            /* Add the native IME output tile back into the real C matrix. */
             scatter_output(profile, m_top, n_top, alpha, out, C, ldc);
 
+            /* If K had leftover values not handled by IME, finish them in scalar C. */
             if (K_main != K) {
                 scalar_gemm_block(IME_MR, IME_NR, K - K_main, alpha,
                                   &A[K_main * M + m_top], M,
@@ -576,6 +862,7 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
             }
         }
 
+        /* If M has leftover rows after full 8-row blocks, compute them scalar. */
         if (m_blocks * IME_MR != M) {
             BLASLONG m_top = m_blocks * IME_MR;
             scalar_gemm_block(M - m_top, IME_NR, K, alpha,
@@ -584,18 +871,29 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
         }
     }
 
+    /* --- Step 7: final cleanup for leftover columns ----------------------- */
+    /* If N has leftover columns after full 4-column blocks, compute them scalar. */
     if (n_blocks * IME_NR != N) {
         BLASLONG n_top = n_blocks * IME_NR;
         scalar_gemm_block(M, N - n_top, K, alpha, A, M, &B[n_top], N,
                           &C[n_top * ldc], ldc);
     }
 
+    /* --- Step 8: release temporary memory and restore CPU placement ------- */
     free(A_all);
     free(B_pack);
     ime_affinity_guard_leave(&guard);
     return 0;
 }
 
+/*
+ * -----------------------------------------------------------------------------
+ * ROADMAP 9: Public entry point used by scripts
+ * -----------------------------------------------------------------------------
+ * Benchmark scripts call this stable function name. It simply forwards the work
+ * to the readable driver above.
+ */
+/* Public wrapper name used by benchmark scripts. */
 int ime_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K,
               int32_t alpha, const int8_t *A, const int8_t *B,
               int32_t *C, BLASLONG ldc)
@@ -609,3 +907,9 @@ int ime_kernel_8x4_zvl128b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K,
 #undef IME_A100_DOT_STEP
 #undef IME_A60_DOT_STEP
 #endif
+
+
+
+
+
+

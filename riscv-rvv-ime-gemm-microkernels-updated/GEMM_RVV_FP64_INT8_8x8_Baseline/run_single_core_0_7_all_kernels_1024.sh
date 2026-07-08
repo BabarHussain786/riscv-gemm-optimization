@@ -7,7 +7,7 @@ N="${N:-1024}"
 K="${K:-1024}"
 RUNS="${RUNS:-6}"
 CORES="${CORES:-0 1 2 3 4 5 6 7}"
-ZVL_FILTER="${ZVL_FILTER:-*}"  # * | zvl128b | zvl256b
+ZVL_FILTER="${ZVL_FILTER:-zvl128b}"  # supported: zvl128b
 OUT_DIR="${OUT_DIR:-${BASE_DIR}/single_core_results_${M}}"
 RAW_DIR="${OUT_DIR}/raw_logs"
 mkdir -p "${RAW_DIR}"

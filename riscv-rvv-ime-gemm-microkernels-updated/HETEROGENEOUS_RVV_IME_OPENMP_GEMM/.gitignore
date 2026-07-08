@@ -1,0 +1,23 @@
+# Generated OpenMP benchmark outputs
+results/*
+!results/.gitkeep
+openmp_results_*/
+openmp_raw_latest_*.csv
+openmp_summary_latest_*.csv
+openmp_live_latest_*.log
+k1_openmp_heterogeneous_*_latest.*
+
+# Build products and raw execution byproducts
+build/
+raw_logs/
+*.o
+*.out
+*.elf
+*.exe
+
+# Local editor/cache noise
+.DS_Store
+Thumbs.db
+results-/
+results_local*/
+*_results_archive*/
