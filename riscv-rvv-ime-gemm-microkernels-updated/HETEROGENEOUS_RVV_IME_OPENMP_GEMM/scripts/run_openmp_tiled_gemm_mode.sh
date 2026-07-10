@@ -11,7 +11,7 @@ RUNS="${6:-6}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODULE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd "${MODULE_DIR}/.." && pwd)"
-TEMPLATE="${MODULE_DIR}/src/openmp_tiled_gemm_benchmark.c"
+TEMPLATE="${MODULE_DIR}/src/openmp_heterogeneous_gemm.c"
 RESULT_ROOT="${MODULE_DIR}/results"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 RESULT_DIR="${RESULT_ROOT}/openmp_results_${MODE}_${M}_${STAMP}"
@@ -444,7 +444,7 @@ while IFS= read -r -d '' makefile; do
     kernel_dir="$(dirname "${makefile}")"
 
     case "${kernel_dir}" in
-        *OPENMP_TILED_GEMM_EXTENSION*|*OPENMP_TILED_GEMM_ALL_KERNELS*) continue ;;
+        *OPENMP_TILED_GEMM_EXTENSION*|*OPENMP_TILED_GEMM_ALL_KERNELS*|*HETEROGENEOUS_RVV_IME_OPENMP_GEMM*) continue ;;
     esac
 
     src=""
@@ -617,3 +617,5 @@ if [ "${build_failed_count}" -ne 0 ] || [ "${run_failed_count}" -ne 0 ]; then
 fi
 
 exit 0
+
+

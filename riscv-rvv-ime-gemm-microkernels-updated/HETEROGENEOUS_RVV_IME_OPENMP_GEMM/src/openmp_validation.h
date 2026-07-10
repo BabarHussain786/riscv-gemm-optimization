@@ -1,22 +1,25 @@
-#ifndef OPENMP_TILED_GEMM_VALIDATION_H
-#define OPENMP_TILED_GEMM_VALIDATION_H
+#ifndef OPENMP_VALIDATION_H
+#define OPENMP_VALIDATION_H
 
 /*
- * What this file does
- * -------------------
- * This file checks whether OpenMP tiling changed the answer.
+ * Validation roadmap
+ * ------------------
+ * This file answers one question: did OpenMP tiling change the result?
  *
- * Very simple idea:
- *   1. First compute C once using the selected kernel in serial form.
- *      This gives the reference answer.
- *   2. Then compute C again using OpenMP tiled execution.
- *   3. Compare both C arrays element by element.
+ * Step 1 -> serial reference:
+ *   Run the same selected kernel once on the full matrix C.
+ *   This is the trusted result for this benchmark run.
  *
- * If both answers match, the tile splitting is correct.
- * If they differ, then some tile may have been missed, overwritten, or called wrongly.
+ * Step 2 -> OpenMP tiled result:
+ *   Run the tiled OpenMP version, where workers compute different C columns.
+ *
+ * Step 3 -> element-by-element comparison:
+ *   For every output value, compare C_openmp[i] with C_reference[i].
+ *   INT8/IME expects exact INT32 equality.
+ *   FP32/FP64 allows a small floating-point tolerance.
+ *
+ * If mismatch_count is zero, the C-column split and kernel dispatch are correct.
  */
-
-#include "openmp_tiled_gemm_config.h"
 
 static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
                               size_t n, double *max_error)
@@ -76,4 +79,6 @@ static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
     return mismatches;
 }
 
-#endif /* OPENMP_TILED_GEMM_VALIDATION_H */
+#endif /* OPENMP_VALIDATION_H */
+
+

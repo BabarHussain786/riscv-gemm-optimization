@@ -1,41 +1,198 @@
 /*
- * Shared OpenMP tiled GEMM benchmark.
+ * Heterogeneous OpenMP GEMM benchmark.
  *
- * This file is the main executable driver. It does not contain the low-level
- * RVV or IME assembly/intrinsic kernel itself. Its job is to prepare matrices,
- * split the output matrix C into column tiles, call the selected micro-kernel,
- * validate the output, measure time, and print one clean result line.
+ * This is the main executable file. It prepares matrices, starts the timed
+ * OpenMP tiled execution, validates the result, and prints performance.
  *
- * Simple view:
- *   A and B are the input matrices.
- *   C is the output matrix.
- *   GEMM computes C = C + A * B.
- *   Instead of giving the whole C matrix to one core, this program cuts C
- *   into vertical column strips. Each strip is called one OpenMP tile.
- *   Example: if N=1024 and tile_N=64, C is cut into 16 vertical strips.
- *   OpenMP workers take these strips and call the selected RVV or IME kernel.
+ * Clean source map:
+ *   openmp_heterogeneous_gemm.c  -> main program, config, helpers, data setup
+ *   openmp_tile_scheduler.h      -> OpenMP threads, C-column tiles, core mapping
+ *   openmp_kernel_dispatch.h     -> calls the selected RVV or IME micro-kernel
+ *   openmp_validation.h          -> serial reference and result comparison
  *
- * Why this file exists:
- *   The single-core benchmark tests one core at a time.
- *   This benchmark tests many cores together, so it shows heterogeneous use.
- *   In mixed K1 mode, IME-capable cores and RVV cores work on different tiles
- *   of the same output matrix C.
- *
- * File map:
- *   openmp_tiled_gemm_config.h      selects FP32, FP64, INT8 RVV, IME, or mixed mode
- *   openmp_tiled_gemm_utils.h       timing, aligned memory, overflow checks, env flags
- *   openmp_tiled_gemm_data.h        deterministic input/output initialization
- *   openmp_tiled_gemm_dispatch.h    calls the real RVV/IME micro-kernel on one tile
- *   openmp_tiled_gemm_validation.h  compares OpenMP output against serial reference
- *   openmp_tiled_gemm_parallel.h    OpenMP tiling, core placement, and tile scheduling
+ * Simple flow:
+ *   Step 1 -> read M, N, K, and tile_N.
+ *   Step 2 -> allocate A, B, C.
+ *   Step 3 -> split C into column tiles.
+ *   Step 4 -> OpenMP workers compute different C tiles.
+ *   Step 5 -> validate C and print time/GFLOPS/GOPS.
  */
-#include "openmp_tiled_gemm_config.h"
-#include "openmp_tiled_gemm_utils.h"
-#include "openmp_tiled_gemm_data.h"
-#include "openmp_tiled_gemm_dispatch.h"
-#include "openmp_tiled_gemm_validation.h"
-#include "openmp_tiled_gemm_parallel.h"
 
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
+
+#include <math.h>
+#include <omp.h>
+#include <sched.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+/* OpenBLAS-style integer type used by the micro-kernel APIs. */
+typedef long BLASLONG;
+
+/*
+ * KERNEL_SYMBOL is supplied by the shell script at compile time.
+ * Example: -DKERNEL_SYMBOL=dgemm_kernel_8x4_zvl128b_lmul4_unroll1
+ */
+#ifndef KERNEL_SYMBOL
+#error "KERNEL_SYMBOL must be defined by the build script"
+#endif
+
+/*
+ * Compile-time mode selection.
+ * The same benchmark file is compiled many times with different -D flags.
+ * Each mode chooses datatype, output type, metric name, and kernel prototype.
+ */
+#if defined(OMP_KIND_FP32)
+typedef float INPUT_T;
+typedef float OUTPUT_T;
+#define METRIC_NAME "GFLOPS"
+#define VALIDATION_NAME "SERIAL_SAME_KERNEL_FP_TOLERANCE"
+int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
+                  INPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
+                  BLASLONG ldc);
+
+#elif defined(OMP_KIND_FP64)
+typedef double INPUT_T;
+typedef double OUTPUT_T;
+#define METRIC_NAME "GFLOPS"
+#define VALIDATION_NAME "SERIAL_SAME_KERNEL_FP_TOLERANCE"
+int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
+                  INPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
+                  BLASLONG ldc);
+
+#elif defined(OMP_KIND_INT8_RVV)
+typedef int8_t INPUT_T;
+typedef int32_t OUTPUT_T;
+#define METRIC_NAME "GOPS"
+#define VALIDATION_NAME "SERIAL_SAME_KERNEL_EXACT_INT32"
+int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
+                  OUTPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
+                  BLASLONG ldc);
+
+#elif defined(OMP_KIND_INT8_IME) || defined(OMP_KIND_INT8_MIXED)
+typedef int8_t INPUT_T;
+typedef int32_t OUTPUT_T;
+#define METRIC_NAME "GOPS"
+#define VALIDATION_NAME "SERIAL_SAME_KERNEL_EXACT_INT32"
+int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
+                  OUTPUT_T alpha, const INPUT_T *A, const INPUT_T *B,
+                  OUTPUT_T *C, BLASLONG ldc);
+#else
+#error "Define one OMP_KIND_* macro"
+#endif
+
+#if (defined(OMP_KIND_INT8_IME) || defined(OMP_KIND_INT8_MIXED)) && !defined(OMP_IME_INPUT_FULL_MATRIX)
+#error "Native IME OpenMP builds require full K-major input"
+#endif
+
+/*
+ * K1 mixed-core map.
+ * Cores 0-3 are treated as IME-capable; cores 4-7 are treated as RVV.
+ */
+#if defined(OMP_KIND_INT8_MIXED)
+#ifndef MIXED_IME_CORE_FIRST
+#define MIXED_IME_CORE_FIRST 0
+#endif
+#ifndef MIXED_IME_CORE_LAST
+#define MIXED_IME_CORE_LAST 3
+#endif
+#ifndef MIXED_IME_TILE_WEIGHT
+#define MIXED_IME_TILE_WEIGHT 4
+#endif
+#ifndef MIXED_RVV_TILE_WEIGHT
+#define MIXED_RVV_TILE_WEIGHT 1
+#endif
+
+static int mixed_cpu_uses_ime(int cpu)
+{
+    return cpu >= MIXED_IME_CORE_FIRST && cpu <= MIXED_IME_CORE_LAST;
+}
+
+static BLASLONG mixed_tile_chunk_for_cpu(int cpu)
+{
+    return mixed_cpu_uses_ime(cpu) ? MIXED_IME_TILE_WEIGHT : MIXED_RVV_TILE_WEIGHT;
+}
+#endif
+
+/* Read current monotonic time in seconds. Used before and after OpenMP work. */
+static double now_sec(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
+}
+
+/* Allocate 64-byte aligned memory for vector/IME-friendly matrix storage. */
+static void *aligned_bytes(size_t bytes)
+{
+    void *ptr = NULL;
+    if (posix_memalign(&ptr, 64, bytes) != 0) {
+        return NULL;
+    }
+    return ptr;
+}
+
+/* Safely multiply sizes; returns 0 if the result would overflow size_t. */
+static int checked_size_product(size_t a, size_t b, size_t *result)
+{
+    if (a != 0 && b > SIZE_MAX / a) {
+        return 0;
+    }
+    *result = a * b;
+    return 1;
+}
+
+/* Small helper used when the last C-column tile is narrower than tile_N. */
+static BLASLONG min_blaslong(BLASLONG a, BLASLONG b)
+{
+    return (a < b) ? a : b;
+}
+
+/* Read yes/no runtime flags such as OMP_VALIDATE and OMP_WARMUP. */
+static int env_enabled(const char *name, int default_value)
+{
+    const char *value = getenv(name);
+    return (value == NULL) ? default_value : atoi(value) != 0;
+}
+
+#if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
+/* Deterministic floating-point input pattern, repeated around zero. */
+static void fill_input(INPUT_T *x, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        x[i] = (INPUT_T)((int)(i % 13) - 6) * (INPUT_T)0.1;
+    }
+}
+
+static void fill_output(OUTPUT_T *x, size_t n)
+{
+    fill_input(x, n);
+}
+#else
+/* Deterministic INT8 input pattern: -6, -5, ..., 6, then repeat. */
+static void fill_input(INPUT_T *x, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        x[i] = (INPUT_T)((int)(i % 13) - 6);
+    }
+}
+
+/* Initial INT32 C values before GEMM applies C = C + A*B. */
+static void fill_output(OUTPUT_T *x, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        x[i] = (OUTPUT_T)((int)(i % 7) - 3);
+    }
+}
+#endif
+
+#include "openmp_kernel_dispatch.h"
+#include "openmp_validation.h"
+#include "openmp_tile_scheduler.h"
 int main(int argc, char **argv)
 {
     /* Step 1: Read the matrix size from the command line.
@@ -412,5 +569,6 @@ int main(int argc, char **argv)
     /* Step 29: Return 0 only when timing and validation both succeeded. */
     return run_failed ? 1 : 0;
 }
+
 
 

@@ -1,22 +1,28 @@
-#ifndef OPENMP_TILED_GEMM_DISPATCH_H
-#define OPENMP_TILED_GEMM_DISPATCH_H
+#ifndef OPENMP_KERNEL_DISPATCH_H
+#define OPENMP_KERNEL_DISPATCH_H
 
 /*
- * Human-readable purpose
- * ----------------------
- * This file is the bridge from OpenMP tiles to your real micro-kernels.
- * OpenMP says: "compute C columns n0..n0+N-1".
- * This file converts that request into the exact pointer call expected by
- * FP32, FP64, INT8 RVV, or IME kernels.
+ * Tile-to-kernel dispatch roadmap
+ * -------------------------------
+ * This file is the bridge between OpenMP tiles and the real micro-kernels.
+ * OpenMP only knows: "this worker owns C columns n0..n0+N-1".
+ * This file turns that tile request into the correct function call.
  *
- * Simple example:
- *   If the full C matrix has 1024 columns and tile_N=64,
- *   tile 3 starts at column n0 = 3*64 = 192.
- *   The code passes B + n0*K and C + n0*M to the RVV kernel.
- *   For IME, B is first copied into B_tile because IME expects packed B data.
+ * Step 1 -> receive one C-column tile from openmp_tile_scheduler.h.
+ * Step 2 -> compute the correct B and C starting addresses for that tile.
+ * Step 3 -> call the selected FP32, FP64, INT8 RVV, IME, or mixed kernel.
+ *
+ * Pointer math for one tile:
+ *   n0       = first output column of this tile
+ *   N        = number of columns inside this tile
+ *   B tile   = B + n0*K       for direct FP/RVV paths
+ *   C tile   = C + n0*M       for all paths
+ *
+ * IME special case:
+ *   IME expects the selected B columns in a compact worker-local buffer.
+ *   Therefore the code copies B(k, n0+column) into B_tile(k, column),
+ *   then calls the IME wrapper on that compact B tile.
  */
-
-#include "openmp_tiled_gemm_config.h"
 
 /* Run the selected kernel on the full matrix. Used for warmup and validation. */
 static int call_full_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
@@ -82,6 +88,8 @@ static int call_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
 #endif
 }
 
-#endif /* OPENMP_TILED_GEMM_DISPATCH_H */
+#endif /* OPENMP_KERNEL_DISPATCH_H */
+
+
 
 

@@ -18,13 +18,13 @@ command -v taskset
 3. Run the compile-only check:
 
 ```bash
-bash OPENMP_TILED_GEMM_ALL_KERNELS/scripts/check_openmp_tiled_gemm_builds.sh
+bash HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/check_openmp_tiled_gemm_builds.sh
 ```
 
 4. Run the K1 campaign:
 
 ```bash
-cd OPENMP_TILED_GEMM_ALL_KERNELS
+cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
 M=1024 N=1024 K=1024 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```

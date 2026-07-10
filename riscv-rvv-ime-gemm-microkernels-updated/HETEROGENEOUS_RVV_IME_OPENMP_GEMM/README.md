@@ -7,7 +7,7 @@ The mixed K1 mode, `k1-mixed-rvv-ime`, uses all cores 0-7. Cores 0-3 execute the
 ## GEMM Decomposition
 
 ```text
-Full operation:       C = A x B, for example M=N=K=1024
+Full operation:       C = C + A x B, for example M=N=K=1024
 OpenMP work tile:     one column block of C, for example 1024x32 or 1024x64
 Micro-kernel tile:    one existing 8x4 or 8x8 kernel update
 INT8 arithmetic:      INT8 x INT8 -> INT32 accumulation/output
@@ -25,7 +25,7 @@ This gives IME-side workers larger tile claims while RVV-side workers still part
 ## Directory Layout
 
 ```text
-OPENMP_TILED_GEMM_ALL_KERNELS/
+HETEROGENEOUS_RVV_IME_OPENMP_GEMM/
   README.md
   .gitignore
   docs/
@@ -33,13 +33,10 @@ OPENMP_TILED_GEMM_ALL_KERNELS/
     openmp_result_schema.md
     reproducibility_checklist.md
   src/
-    openmp_tiled_gemm_benchmark.c    compact main driver
-    openmp_tiled_gemm_config.h       datatype, metric, and kernel selection
-    openmp_tiled_gemm_utils.h        timing, allocation, size checks
-    openmp_tiled_gemm_data.h         deterministic A/B/C initialization
-    openmp_tiled_gemm_dispatch.h     full/tiled micro-kernel calls
-    openmp_tiled_gemm_validation.h   output comparison
-    openmp_tiled_gemm_parallel.h     OpenMP tile scheduling and worker placement
+    openmp_heterogeneous_gemm.c      main driver, config, helpers, timing, output
+    openmp_tile_scheduler.h          OpenMP tiling, thread/core assignment, mixed scheduling
+    openmp_kernel_dispatch.h         calls RVV/IME micro-kernels for each C tile
+    openmp_validation.h              serial reference and output comparison
   scripts/
     run_openmp_tiled_gemm_mode.sh
     run_k1_heterogeneous_openmp_gemm_1024.sh
@@ -81,7 +78,7 @@ The final K1 OpenMP campaign uses ZVL_FILTER=128b by default. This keeps the sub
 From the repository root:
 
 ```bash
-cd OPENMP_TILED_GEMM_ALL_KERNELS
+cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
@@ -89,7 +86,7 @@ bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 Detached run with `nohup`:
 
 ```bash
-cd OPENMP_TILED_GEMM_ALL_KERNELS
+cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
 nohup bash -lc 'M=1024 N=1024 K=1024 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh' > results/k1_openmp_nohup_latest.log 2>&1 &
 ```
 
@@ -141,7 +138,7 @@ The reported timing scope is `timed_parallel_tile_region`. It includes the OpenM
 For a board-side reporting checklist, use `docs/reproducibility_checklist.md`.
 
 ```bash
-bash OPENMP_TILED_GEMM_ALL_KERNELS/scripts/check_openmp_tiled_gemm_builds.sh
+bash HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/check_openmp_tiled_gemm_builds.sh
 ```
 
 Useful controls:
@@ -155,3 +152,6 @@ OMP_VALIDATE=0          # disable serial same-kernel validation
 VALIDATE_EACH_RUN=1     # validate every timed repetition
 ENABLE_MF2=1            # include experimental native IME mf2 path
 ```
+
+
+
