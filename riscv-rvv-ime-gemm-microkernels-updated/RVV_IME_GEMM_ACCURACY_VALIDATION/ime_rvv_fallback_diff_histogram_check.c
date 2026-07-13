@@ -34,11 +34,8 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 #endif
 
 #if defined(ACC_KIND_INT8_IME)
-#if !defined(ACC_IME_INPUT_FULL_MATRIX) && !defined(ACC_IME_INPUT_PREPACKED_ROWS)
-#error "Define ACC_IME_INPUT_FULL_MATRIX or ACC_IME_INPUT_PREPACKED_ROWS for IME"
-#endif
-#if defined(ACC_IME_INPUT_FULL_MATRIX) && defined(ACC_IME_INPUT_PREPACKED_ROWS)
-#error "Define only one IME input contract"
+#if !defined(ACC_IME_INPUT_FULL_MATRIX)
+#error "Define ACC_IME_INPUT_FULL_MATRIX for IME"
 #endif
 #endif
 
@@ -76,7 +73,12 @@ static int sign_value(void)
 static void *aligned_bytes(size_t bytes)
 {
     void *ptr = NULL;
-    size_t padded = (bytes + 63U) & ~(size_t)63U;
+    size_t padded;
+
+    if (bytes > SIZE_MAX - 63U) {
+        return NULL;
+    }
+    padded = (bytes + 63U) & ~(size_t)63U;
 
     if (padded == 0) {
         padded = 64;
@@ -87,6 +89,15 @@ static void *aligned_bytes(size_t bytes)
 
     memset(ptr, 0, padded);
     return ptr;
+}
+
+static int size_mul_ok(size_t a, size_t b, size_t *result)
+{
+    if (a != 0 && b > SIZE_MAX / a) {
+        return 0;
+    }
+    *result = a * b;
+    return 1;
 }
 
 static BLASLONG tile_step(BLASLONG remaining, BLASLONG full_tile)
@@ -106,6 +117,21 @@ static int valid_input_class(const char *input_class)
            strcmp(input_class, "full_range_uniform") == 0 ||
            strcmp(input_class, "mixed_magnitude") == 0 ||
            strcmp(input_class, "cancellation_stress") == 0;
+}
+
+static int parse_positive_blaslong(const char *text, BLASLONG *value)
+{
+    char *end = NULL;
+    long parsed;
+
+    errno = 0;
+    parsed = strtol(text, &end, 10);
+    if (errno != 0 || end == text || *end != '\0' || parsed <= 0) {
+        return 0;
+    }
+
+    *value = (BLASLONG)parsed;
+    return 1;
 }
 
 static int8_t int8_random_value(const char *input_class)
@@ -188,29 +214,6 @@ static void fill_i8_cancellation_full_matrix(int8_t *x, BLASLONG outer,
         }
     }
 }
-#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
-static void fill_i8_cancellation_prepacked_rows(int8_t *x, BLASLONG outer,
-                                                BLASLONG K, int is_a)
-{
-    for (BLASLONG lane = 0; lane < outer; ++lane) {
-        for (BLASLONG k = 0; k + 1 < K; k += 2) {
-            int value = sign_value() * uniform_int_range(1, 16);
-            int paired = is_a ? value : -value;
-
-            if (!is_a && k + 2 == K) {
-                paired += paired < 0 ? 1 : -1;
-            }
-
-            x[(size_t)lane * (size_t)K + (size_t)k] = (int8_t)value;
-            x[(size_t)lane * (size_t)K + (size_t)(k + 1)] = (int8_t)paired;
-        }
-
-        if (K & 1) {
-            x[(size_t)lane * (size_t)K + (size_t)(K - 1)] =
-                int8_random_value("bounded_uniform");
-        }
-    }
-}
 #endif
 
 static void fill_i8_inputs(int8_t *A, int8_t *B, BLASLONG M, BLASLONG N,
@@ -220,9 +223,6 @@ static void fill_i8_inputs(int8_t *A, int8_t *B, BLASLONG M, BLASLONG N,
 #if defined(ACC_IME_INPUT_FULL_MATRIX)
         fill_i8_cancellation_full_matrix(A, M, K, 1);
         fill_i8_cancellation_full_matrix(B, N, K, 0);
-#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
-        fill_i8_cancellation_prepacked_rows(A, M, K, 1);
-        fill_i8_cancellation_prepacked_rows(B, N, K, 0);
 #else
         fill_i8_cancellation_packed(A, M, K, ACC_MR, 1);
         fill_i8_cancellation_packed(B, N, K, ACC_NR, 0);
@@ -241,9 +241,13 @@ static int32_t wrap_i32_add(int32_t dst, int64_t addend)
     return (int32_t)(a + b);
 }
 
-static void reference_i32(BLASLONG M, BLASLONG N, BLASLONG K,
-                          int32_t alpha, const int8_t *A, const int8_t *B,
-                          int32_t *Cref, int *overflow_count, BLASLONG ldc)
+/*
+ * Compute the trusted matrix answer independently in INT64.
+ * The final value is stored as INT32 only after overflow has been checked.
+ */
+static void trusted_answer_i32(BLASLONG M, BLASLONG N, BLASLONG K,
+                               int32_t alpha, const int8_t *A, const int8_t *B,
+                               int32_t *Ctrusted, int *overflow_count, BLASLONG ldc)
 {
     BLASLONG n_top = 0;
 
@@ -266,9 +270,6 @@ static void reference_i32(BLASLONG M, BLASLONG N, BLASLONG K,
 #if defined(ACC_IME_INPUT_FULL_MATRIX)
                         sum += (int64_t)A[(size_t)k * (size_t)M + (size_t)(m_top + r)] *
                                (int64_t)B[(size_t)k * (size_t)N + (size_t)(n_top + c)];
-#elif defined(ACC_IME_INPUT_PREPACKED_ROWS)
-                        sum += (int64_t)A[(size_t)(m_top + r) * (size_t)K + (size_t)k] *
-                               (int64_t)B[(size_t)(n_top + c) * (size_t)K + (size_t)k];
 #else
                         sum += (int64_t)Ablk[(size_t)k * (size_t)rows + (size_t)r] *
                                (int64_t)Bblk[(size_t)k * (size_t)cols + (size_t)c];
@@ -280,8 +281,8 @@ static void reference_i32(BLASLONG M, BLASLONG N, BLASLONG K,
                         *overflow_count += 1;
                     }
 
-                    Cref[(size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r)] =
-                        wrap_i32_add(Cref[(size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r)], sum);
+                    Ctrusted[(size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r)] =
+                        wrap_i32_add(Ctrusted[(size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r)], sum);
                 }
             }
 
@@ -361,25 +362,37 @@ static int write_input_histogram(const char *path, const int8_t *A, size_t count
 static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K,
                      const char *diff_hist_path, const char *input_hist_path)
 {
-    size_t size_a = (size_t)M * (size_t)K;
-    size_t size_b = (size_t)N * (size_t)K;
-    size_t size_c = (size_t)M * (size_t)N;
+    size_t size_a;
+    size_t size_b;
+    size_t size_c;
+    size_t bytes_c_i32;
+    size_t bytes_c_i64;
+
+    if (!size_mul_ok((size_t)M, (size_t)K, &size_a) ||
+        !size_mul_ok((size_t)N, (size_t)K, &size_b) ||
+        !size_mul_ok((size_t)M, (size_t)N, &size_c) ||
+        !size_mul_ok(size_c, sizeof(int32_t), &bytes_c_i32) ||
+        !size_mul_ok(size_c, sizeof(int64_t), &bytes_c_i64)) {
+        fprintf(stderr, "matrix size is too large\n");
+        return 1;
+    }
+
     int8_t *A = aligned_bytes(size_a * sizeof(int8_t));
     int8_t *B = aligned_bytes(size_b * sizeof(int8_t));
-    int32_t *C = aligned_bytes(size_c * sizeof(int32_t));
-    int32_t *Cref = aligned_bytes(size_c * sizeof(int32_t));
-    int64_t *diffs = aligned_bytes(size_c * sizeof(int64_t));
+    int32_t *C = aligned_bytes(bytes_c_i32);
+    int32_t *Ctrusted = aligned_bytes(bytes_c_i32);
+    int64_t *diffs = aligned_bytes(bytes_c_i64);
     uint64_t mismatch_count = 0;
     int64_t max_abs_diff = 0;
     int overflow_count = 0;
     int rc;
 
-    if (!A || !B || !C || !Cref || !diffs) {
+    if (!A || !B || !C || !Ctrusted || !diffs) {
         fprintf(stderr, "allocation failed\n");
         free(A);
         free(B);
         free(C);
-        free(Cref);
+        free(Ctrusted);
         free(diffs);
         return 1;
     }
@@ -389,12 +402,12 @@ static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K
         free(A);
         free(B);
         free(C);
-        free(Cref);
+        free(Ctrusted);
         free(diffs);
         return 1;
     }
 
-    reference_i32(M, N, K, 1, A, B, Cref, &overflow_count, M);
+    trusted_answer_i32(M, N, K, 1, A, B, Ctrusted, &overflow_count, M);
 
     rc = KERNEL_SYMBOL(M, N, K, 1, A, B, C, M);
     if (rc != 0) {
@@ -405,13 +418,13 @@ static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K
         free(A);
         free(B);
         free(C);
-        free(Cref);
+        free(Ctrusted);
         free(diffs);
         return 0;
     }
 
     for (size_t i = 0; i < size_c; ++i) {
-        int64_t diff = (int64_t)C[i] - (int64_t)Cref[i];
+        int64_t diff = (int64_t)C[i] - (int64_t)Ctrusted[i];
         int64_t abs_diff = diff < 0 ? -diff : diff;
 
         diffs[i] = diff;
@@ -428,7 +441,7 @@ static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K
         free(A);
         free(B);
         free(C);
-        free(Cref);
+        free(Ctrusted);
         free(diffs);
         return 1;
     }
@@ -443,7 +456,7 @@ static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K
     free(A);
     free(B);
     free(C);
-    free(Cref);
+    free(Ctrusted);
     free(diffs);
     return 0;
 }
@@ -451,6 +464,9 @@ static int run_check(const char *input_class, BLASLONG M, BLASLONG N, BLASLONG K
 int main(int argc, char **argv)
 {
     char *seed_end = NULL;
+    BLASLONG M;
+    BLASLONG N;
+    BLASLONG K;
 
     if (argc != 7 && argc != 8) {
         fprintf(stderr,
@@ -460,9 +476,14 @@ int main(int argc, char **argv)
     }
 
     const char *input_class = argv[1];
-    BLASLONG M = atol(argv[2]);
-    BLASLONG N = atol(argv[3]);
-    BLASLONG K = atol(argv[4]);
+    if (!parse_positive_blaslong(argv[2], &M) ||
+        !parse_positive_blaslong(argv[3], &N) ||
+        !parse_positive_blaslong(argv[4], &K)) {
+        fprintf(stderr, "M, N, and K must be positive integers\n");
+        return 2;
+    }
+
+    errno = 0;
     uint64_t seed = strtoull(argv[5], &seed_end, 10);
     const char *diff_hist_path = argv[6];
     const char *input_hist_path = argc == 8 ? argv[7] : NULL;
@@ -471,11 +492,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "unsupported input class: %s\n", input_class);
         return 2;
     }
-    if (M <= 0 || N <= 0 || K <= 0) {
-        fprintf(stderr, "M, N, and K must be positive\n");
-        return 2;
-    }
-    if (!seed_end || *seed_end != '\0') {
+    if (errno != 0 || argv[5][0] == '-' || !seed_end ||
+        seed_end == argv[5] || *seed_end != '\0') {
         fprintf(stderr, "seed must be an unsigned integer\n");
         return 2;
     }

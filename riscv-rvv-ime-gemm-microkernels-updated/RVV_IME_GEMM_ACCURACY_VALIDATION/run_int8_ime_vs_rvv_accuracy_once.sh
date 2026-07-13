@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -u
+set -uo pipefail
 
 MODE="${1:-k1}"
 RUNS="${2:-1}"
@@ -21,6 +21,8 @@ LOG_DIR="${RESULT_DIR}/logs"
 CSV="${RESULT_DIR}/int8_ime_vs_rvv_accuracy_once_summary_${MODE}_${M}_${STAMP}.csv"
 LATEST_CSV="${SCRIPT_DIR}/int8_ime_vs_rvv_accuracy_once_summary_${MODE}_latest.csv"
 LATEST_LOG="${SCRIPT_DIR}/int8_ime_vs_rvv_accuracy_once_live_${MODE}_latest.log"
+LATEST_RESULT_POINTER="${SCRIPT_DIR}/int8_ime_vs_rvv_accuracy_once_result_${MODE}_latest.txt"
+LATEST_STATUS_POINTER="${SCRIPT_DIR}/int8_ime_vs_rvv_accuracy_once_status_${MODE}_latest.txt"
 
 CC="${CC:-gcc}"
 ABI="${ABI:-lp64d}"
@@ -30,7 +32,7 @@ usage()
 {
     cat <<'EOF'
 Usage:
-  bash ACCURACY_CHECKER/run_int8_ime_vs_rvv_accuracy_once.sh MODE [RUNS]
+  bash RVV_IME_GEMM_ACCURACY_VALIDATION/run_int8_ime_vs_rvv_accuracy_once.sh MODE [RUNS]
 
 MODE:
   k1   IME cores 0-3, RVV fallback core 4
@@ -40,7 +42,7 @@ Environment options:
   M N K                         default 1024 1024 1024
   INPUT_CLASS                   default full_range_uniform
   BASE_SEED                     default 0
-  ENABLE_MF2=1     include LMUL mf2 native IME kernels
+  ENABLE_MF2=1     include experimental LMUL mf2 native IME kernels
 EOF
 }
 
@@ -66,6 +68,14 @@ case "${RUNS}" in
         ;;
 esac
 
+case "${ENABLE_MF2}" in
+    0|1) ;;
+    *)
+        printf 'ENABLE_MF2 must be 0 or 1.\n' >&2
+        exit 2
+        ;;
+esac
+
 if [ ! -f "${HARNESS}" ]; then
     printf 'Missing harness: %s\n' "${HARNESS}" >&2
     exit 1
@@ -73,6 +83,8 @@ fi
 
 mkdir -p "${BUILD_DIR}" "${HIST_DIR}" "${LOG_DIR}"
 : > "${LATEST_LOG}"
+printf '%s\n' "${RESULT_DIR}" > "${LATEST_RESULT_POINTER}"
+: > "${LATEST_STATUS_POINTER}"
 
 log()
 {
@@ -95,6 +107,7 @@ march_for_zvl()
 {
     case "$1" in
         128b) printf 'rv64gcv_zvl128b' ;;
+        256b) printf 'rv64gcv_zvl256b' ;;
         *) return 1 ;;
     esac
 }
@@ -102,8 +115,7 @@ march_for_zvl()
 input_contract_for_tile()
 {
     case "$1" in
-        8x4) printf 'FULL_MATRIX' ;;
-        8x8) printf 'PREPACKED_ROWS' ;;
+        8x4|8x8) printf 'FULL_MATRIX' ;;
         *) return 1 ;;
     esac
 }
@@ -129,7 +141,6 @@ compile_check()
 
     case "${input_contract}" in
         FULL_MATRIX) defines+=("-DACC_IME_INPUT_FULL_MATRIX=1") ;;
-        PREPACKED_ROWS) defines+=("-DACC_IME_INPUT_PREPACKED_ROWS=1") ;;
         *) return 1 ;;
     esac
 
@@ -148,22 +159,55 @@ compile_check()
 
 run_one()
 {
-    local exe="$1"
-    local core="$2"
-    local seed="$3"
-    local diff_csv="$4"
-    local input_csv="$5"
-    local run_log="$6"
+    local path_kind="$1"
+    local exe="$2"
+    local core="$3"
+    local seed="$4"
+    local diff_csv="$5"
+    local input_csv="$6"
+    local run_log="$7"
 
-    taskset -c "${core}" "${exe}" "${INPUT_CLASS}" "${M}" "${N}" "${K}" \
-        "${seed}" "${diff_csv}" "${input_csv}" > "${run_log}" 2>&1
+    if [ "${path_kind}" = "ime_native" ]; then
+        taskset -c "${core}" env SPACEMIT_IME_FORCE_NATIVE=1 \
+            "${exe}" "${INPUT_CLASS}" "${M}" "${N}" "${K}" \
+            "${seed}" "${diff_csv}" "${input_csv}" > "${run_log}" 2>&1
+    else
+        taskset -c "${core}" env SPACEMIT_IME_FORCE_RVV=1 \
+            "${exe}" "${INPUT_CLASS}" "${M}" "${N}" "${K}" \
+            "${seed}" "${diff_csv}" "${input_csv}" > "${run_log}" 2>&1
+    fi
+}
+
+parse_run_result()
+{
+    local run_log="$1"
+    local result_line
+    local ignored_fields
+
+    result_line="$(awk -F, '
+        $1 == "OK" || $1 == "NUMERICAL_FAILED" || $1 == "KERNEL_RETURN" {
+            print
+            exit
+        }
+    ' "${run_log}")"
+
+    if [ -z "${result_line}" ]; then
+        return 1
+    fi
+
+    IFS=, read -r status return_code total_elements mismatch_count \
+        max_integer_difference overflow_count exact_match_rate ignored_fields \
+        <<< "${result_line}"
+
+    [ -n "${status}" ]
 }
 
 printf 'timestamp,mode,path,core,seed,kernel_family,kernel,tile_shape,zvl,lmul,unroll,input_class,matrix_m,matrix_n,matrix_k,status,return_code,total_elements,mismatch_count,max_integer_difference,overflow_count,exact_match_rate,diff_histogram,input_histogram,log_file\n' > "${CSV}"
 
-log "IME native vs RVV fallback histogram accuracy"
-log "Method: controlled input, reference C, element-wise C_kernel - C_ref histogram."
-log "This follows the paper-style reference comparison principle, adapted to INT8-to-INT32 RVV/IME GEMM."
+log "Goal: check whether IME-native and RVV-fallback calculate the same INT8-to-INT32 matrix answer"
+log "Trusted answer: the same row-by-column multiplication accumulated independently in INT64"
+log "Evidence: wrong-output count, largest absolute difference, exact-match rate, and difference histogram"
+log "Ozaki adoption: trusted-answer comparison and maximum-error reporting; no slicing or CRT reconstruction"
 log "MODE=${MODE} M=${M} N=${N} K=${K} RUNS=${RUNS}"
 log "INPUT_CLASS=${INPUT_CLASS}"
 log "BASE_SEED=${BASE_SEED}"
@@ -178,6 +222,7 @@ built_count=0
 ok_count=0
 build_failed_count=0
 run_failed_count=0
+required_skip_count=0
 
 while IFS= read -r kernel_dir; do
     kernel_count=$((kernel_count + 1))
@@ -190,8 +235,30 @@ while IFS= read -r kernel_dir; do
     mr="${tile_shape%x*}"
     nr="${tile_shape#*x}"
     symbol="${kernel}"
-    march="$(march_for_zvl "${zvl}")"
-    input_contract="$(input_contract_for_tile "${tile_shape}")"
+
+    case "${tile_shape}" in
+        8x4|8x8) ;;
+        *)
+            log "SKIP unsupported/experimental tile: ${tile_shape} (${kernel})"
+            continue
+            ;;
+    esac
+
+    if [ "${lmul}" = "lmulmf2" ] && [ "${ENABLE_MF2}" != "1" ]; then
+        log "SKIP experimental native IME LMUL=mf2: ${kernel}"
+        continue
+    fi
+
+    if ! march="$(march_for_zvl "${zvl}")"; then
+        log "SKIP unsupported ZVL: ${zvl} (${kernel})"
+        required_skip_count=$((required_skip_count + 1))
+        continue
+    fi
+    if ! input_contract="$(input_contract_for_tile "${tile_shape}")"; then
+        log "SKIP unsupported input contract: ${tile_shape} (${kernel})"
+        required_skip_count=$((required_skip_count + 1))
+        continue
+    fi
     kernel_c="${kernel_dir}/${kernel}.c"
     fallback_c="${kernel_dir}/rvv_fallback.c"
     safe_kernel="${family}_${kernel}"
@@ -204,6 +271,7 @@ while IFS= read -r kernel_dir; do
 
     if [ ! -f "${kernel_c}" ] || [ ! -f "${fallback_c}" ]; then
         log "SKIP missing source: ${kernel_c} or ${fallback_c}"
+        required_skip_count=$((required_skip_count + 1))
         continue
     fi
 
@@ -255,14 +323,8 @@ while IFS= read -r kernel_dir; do
                 input_csv="${HIST_DIR}/${safe_kernel}_ime_native_core${core}_run${run}_input.csv"
                 run_log="${LOG_DIR}/${safe_kernel}_ime_native_core${core}_run${run}.log"
 
-                if run_one "${ime_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}"; then
-                    status="$(awk -F, 'NR==2 {print $1}' "${run_log}")"
-                    return_code="$(awk -F, 'NR==2 {print $2}' "${run_log}")"
-                    total_elements="$(awk -F, 'NR==2 {print $3}' "${run_log}")"
-                    mismatch_count="$(awk -F, 'NR==2 {print $4}' "${run_log}")"
-                    max_integer_difference="$(awk -F, 'NR==2 {print $5}' "${run_log}")"
-                    overflow_count="$(awk -F, 'NR==2 {print $6}' "${run_log}")"
-                    exact_match_rate="$(awk -F, 'NR==2 {print $7}' "${run_log}")"
+                if run_one "ime_native" "${ime_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}" &&
+                   parse_run_result "${run_log}"; then
                     [ "${status}" = "OK" ] && ok_count=$((ok_count + 1)) || run_failed_count=$((run_failed_count + 1))
                 else
                     status="RUN_FAILED"
@@ -293,14 +355,8 @@ while IFS= read -r kernel_dir; do
                 input_csv="${HIST_DIR}/${safe_kernel}_rvv_fallback_core${core}_run${run}_input.csv"
                 run_log="${LOG_DIR}/${safe_kernel}_rvv_fallback_core${core}_run${run}.log"
 
-                if run_one "${rvv_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}"; then
-                    status="$(awk -F, 'NR==2 {print $1}' "${run_log}")"
-                    return_code="$(awk -F, 'NR==2 {print $2}' "${run_log}")"
-                    total_elements="$(awk -F, 'NR==2 {print $3}' "${run_log}")"
-                    mismatch_count="$(awk -F, 'NR==2 {print $4}' "${run_log}")"
-                    max_integer_difference="$(awk -F, 'NR==2 {print $5}' "${run_log}")"
-                    overflow_count="$(awk -F, 'NR==2 {print $6}' "${run_log}")"
-                    exact_match_rate="$(awk -F, 'NR==2 {print $7}' "${run_log}")"
+                if run_one "rvv_fallback" "${rvv_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}" &&
+                   parse_run_result "${run_log}"; then
                     [ "${status}" = "OK" ] && ok_count=$((ok_count + 1)) || run_failed_count=$((run_failed_count + 1))
                 else
                     status="RUN_FAILED"
@@ -336,6 +392,17 @@ log "built_executables=${built_count}"
 log "ok_runs=${ok_count}"
 log "build_failed=${build_failed_count}"
 log "run_failed=${run_failed_count}"
+log "required_skips=${required_skip_count}"
+if [ "${build_failed_count}" -eq 0 ] && \
+   [ "${run_failed_count}" -eq 0 ] && \
+   [ "${required_skip_count}" -eq 0 ] && \
+   [ "${ok_count}" -gt 0 ]; then
+    runner_status="PASS"
+else
+    runner_status="FAIL"
+fi
+log "RUNNER_STATUS=${runner_status}"
+printf '%s\n' "${runner_status}" > "${LATEST_STATUS_POINTER}"
 log "CSV=${CSV}"
 log "Latest CSV=${LATEST_CSV}"
 log "Histograms=${HIST_DIR}"

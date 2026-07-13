@@ -27,6 +27,7 @@ all_single_core_results_*/
 **/raw_logs/
 *.log
 *.csv
+!HETEROGENEOUS_RVV_IME_OPENMP_GEMM/metadata/openmp_tiled_gemm_kernel_manifest.csv
 
 # Archived/generated material kept outside the clean GitHub source set
 **/extra/
