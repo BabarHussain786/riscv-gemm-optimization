@@ -21,25 +21,48 @@ command -v taskset
 bash HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/check_openmp_tiled_gemm_builds.sh
 ```
 
-4. Run the K1 campaign:
+4. Confirm that nested OpenMP is enabled:
+
+```bash
+export OMP_MAX_ACTIVE_LEVELS=2
+```
+
+5. Record the available system memory nodes:
+
+```bash
+cat /sys/devices/system/node/online
+```
+
+The K1 campaign uses cluster-aware placement through exact core affinity and
+separate output ownership.
+
+6. Run the K1 campaign with one common tile width:
 
 ```bash
 cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
-M=1024 N=1024 K=1024 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
+M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 \
+MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
 
-5. Check completion:
+7. Check completion. Accept only `status=OK`:
 
 ```bash
-grep -R "DONE" results/*/openmp_live_*.log results/k1_openmp_heterogeneous_live_latest.log
+grep -R "DONE status=" results/*/openmp_live_*.log results/k1_openmp_heterogeneous_live_latest.log
 ```
 
-6. Use these files for analysis:
+8. Use these files for analysis:
 
 ```text
 results/k1_openmp_heterogeneous_raw_latest.csv
 results/k1_openmp_heterogeneous_summary_latest.csv
 ```
 
-7. Inspect `worker_placement` in the raw CSV for mixed-mode runs to verify that cores 0-3 executed the IME path and cores 4-7 executed the RVV fallback path.
+9. Inspect the mixed log and raw CSV:
+
+```text
+STATIC_TILE_SPLIT must equal the sum of completed worker tiles.
+Workers 0-3 must run on cores 0-3 through IME.
+Workers 4-7 must run on cores 4-7 through the explicit RVV kernel call.
+MISMATCH_COUNT must be 0.
+```

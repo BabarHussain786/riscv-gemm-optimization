@@ -11,7 +11,7 @@ INT8 IGEMM microkernel family for benchmarking INT8 x INT8 -> INT32 with the 8x8
 | Backend | RVV |
 | Tile shape | 8x8 |
 | Variant count | 56 |
-| ZVL targets | 128b, 256b |
+| ZVL target | 256b |
 | LMUL labels | lmulmf8, lmulmf4, lmulmf2, lmul1, lmul2, lmul4, lmul8 |
 | Unroll factors | unroll1, unroll2, unroll4, unroll8 |
 | Benchmark driver | `igemm_bench.c` |
@@ -43,4 +43,4 @@ make clean && make
 
 ## Notes
 
-This family is the largest standalone RVV INT8 set and covers both 128b and 256b ZVL targets.
+This family is the largest standalone RVV INT8 set and uses the ZVL256 target.

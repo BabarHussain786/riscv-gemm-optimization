@@ -183,8 +183,8 @@ printf 'FP32/INT8 RVV 8x8 single-core benchmark\n' | tee "${LIVE_LOG}"
 printf 'Matrix size: M=%s N=%s K=%s, runs=%s, cores=%s\n' "${M}" "${N}" "${K}" "${RUNS}" "${CORES}" | tee -a "${LIVE_LOG}"
 printf 'Output: %s\n' "${OUT_DIR}" | tee -a "${LIVE_LOG}"
 
-run_family "FP32_SGEMM" "${FP32_ROOT}" "sgemm_kernel_8x8_zvl128b_lmul*_unroll*"
-run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x8_zvl128b_lmul*_unroll*"
+run_family "FP32_SGEMM" "${FP32_ROOT}" "sgemm_kernel_8x8_zvl256b_lmul*_unroll*"
+run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x8_zvl256b_lmul*_unroll*"
 
 write_summary
 

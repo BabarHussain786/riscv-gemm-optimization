@@ -221,8 +221,8 @@ fi
 
 echo 'family,kernel,core,domain,run,m,n,k,metric,value,time_sec,status,return_code,log_file' > "${RAW_CSV}"
 
-run_family "FP64_DGEMM" "${FP64_ROOT}" "dgemm_kernel_8x4_zvl128b_lmul*_unroll*"
-run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x4_zvl128b_lmul*_unroll*"
+run_family "FP64_DGEMM" "${FP64_ROOT}" "dgemm_kernel_8x4_zvl256b_lmul*_unroll*"
+run_family "INT8_RVV" "${INT8_ROOT}" "igemm_kernel_8x4_zvl256b_lmul*_unroll*"
 
 write_summary
 cp "${RAW_CSV}" "${LATEST_RAW}"

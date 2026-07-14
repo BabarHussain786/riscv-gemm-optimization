@@ -11,7 +11,7 @@ INT8 IGEMM microkernel family for benchmarking INT8 x INT8 -> INT32 with the 8x4
 | Backend | RVV |
 | Tile shape | 8x4 |
 | Variant count | 28 |
-| ZVL targets | 128b |
+| ZVL target | 256b |
 | LMUL labels | lmulmf8, lmulmf4, lmulmf2, lmul1, lmul2, lmul4, lmul8 |
 | Unroll factors | unroll1, unroll2, unroll4, unroll8 |
 | Benchmark driver | `igemm_bench.c` |

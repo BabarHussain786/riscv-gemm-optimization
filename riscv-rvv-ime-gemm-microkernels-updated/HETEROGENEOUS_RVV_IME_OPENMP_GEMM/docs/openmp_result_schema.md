@@ -44,6 +44,7 @@ Important raw columns:
 | `mismatch_count` | Number of output mismatches against the serial same-kernel check |
 | `max_error` | Maximum output error observed during validation |
 | `worker_placement` | Per-worker CPU/path/tile information |
+| `static_tile_split` | Fixed mixed ownership, for example `IME:26;RVV:6`; `NA` for homogeneous modes |
 | `log_file` | Raw log for the compiled executable or timed run |
 
 ## Summary CSV
@@ -60,7 +61,7 @@ The combined K1 summary is:
 results/k1_openmp_heterogeneous_summary_latest.csv
 ```
 
-Summary rows are grouped by mode, kernel identity, datatype path, core group, requested thread count, and metric. The summary reports:
+Summary rows are grouped by mode, kernel identity, datatype path, core group, requested thread count, `M`, `N`, `K`, `tile_N`, metric, and `static_tile_split`. The summary reports:
 
 ```text
 ok_runs
@@ -68,7 +69,7 @@ mean_metric
 median_metric
 min_metric
 max_metric
-std_metric
+sample_std_metric
 mean_time_sec
 min_time_sec
 max_time_sec
@@ -76,7 +77,7 @@ failed_runs
 build_failed_runs
 ```
 
-For plotting, use `mean_metric` with `std_metric` as the primary throughput summary. Use `median_metric` when the run distribution is skewed or when a robust central value is preferred.
+For plotting, use `mean_metric` with `sample_std_metric` as the primary throughput summary. Use `median_metric` when the run distribution is skewed or when a robust central value is preferred.
 
 ## Live Log
 
@@ -85,9 +86,10 @@ The live log is intended for terminal monitoring and reviewer readability. It is
 Example live output:
 
 ```text
-KERNEL: ime_kernel_8x4_zvl128b_lmul1_unroll4
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
   MODE: K1 heterogeneous OpenMP RVV-IME execution
-  PATH: INT8 heterogeneous IME/RVV-fallback GEMM (INT8 x INT8 -> INT32)
+  PATH: INT8 heterogeneous native-IME/RVV GEMM (INT8 x INT8 -> INT32)
+  STATIC_TILE_SPLIT=IME:26;RVV:6
     run 1: OK GOPS=... time=... threads=8 validation=1
-      workers: thread0:cpu0:IME:tiles=..., thread4:cpu4:RVV:tiles=...
+      workers: 0:cpu0:IME:tiles7;...;4:cpu4:RVV:tiles2
 ```

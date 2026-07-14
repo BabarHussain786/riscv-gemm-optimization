@@ -2,38 +2,34 @@
 #define OPENMP_VALIDATION_H
 
 /*
- * Validation roadmap
- * ------------------
- * This file answers one question: did OpenMP tiling change the result?
+ * VALIDATION ROADMAP
+ * ==================
+ * This file answers one simple question: did OpenMP change the answer?
  *
- * Step 1 -> serial reference:
- *   Run the same selected kernel once on the full matrix C.
- *   This is the trusted result for this benchmark run.
+ * Step 1 -> The main file computes C_reference with one serial kernel call.
+ * Step 2 -> OpenMP computes C_actual by sharing output strips among workers.
+ * Step 3 -> This file compares every matching position in the two matrices.
+ * Step 4 -> It counts wrong values and remembers the largest difference.
  *
- * Step 2 -> OpenMP tiled result:
- *   Run the tiled OpenMP version, where workers compute different C columns.
- *
- * Step 3 -> element-by-element comparison:
- *   For every output value, compare C_openmp[i] with C_reference[i].
- *   INT8/IME expects exact INT32 equality.
- *   FP32/FP64 allows a small floating-point tolerance.
- *
- * If mismatch_count is zero, the C-column split and kernel dispatch are correct.
+ * INT8/IME must match exactly because both paths produce INT32 values.
+ * FP32/FP64 use a small tolerance because floating-point rounding can differ.
+ * A mismatch count of zero means the tiled assembly produced the same output.
  */
 
 static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
                               size_t n, double *max_error)
 {
+    /* ROADMAP BLOCK 1: Start both reported validation values at zero. */
     /* mismatches counts how many C elements are wrong. */
     size_t mismatches = 0;
 
     /* largest stores the biggest absolute difference seen so far. */
     double largest = 0.0;
 
-    /* Check every output element C[i]. */
+    /* ROADMAP BLOCK 2: Visit every output element C[i] exactly once. */
     for (size_t i = 0; i < n; ++i) {
 #if defined(OMP_KIND_FP32)
-        /* FP32 uses tolerance because tiny floating-point differences are normal. */
+        /* ROADMAP BLOCK 3A: FP32 allows small absolute and relative error. */
         double actual_value = (double)actual[i];
         double reference_value = (double)reference[i];
         double error;
@@ -46,7 +42,7 @@ static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
         error = fabs(actual_value - reference_value);
         tolerance = 1e-5 + 1e-5 * fabs(reference_value);
 #elif defined(OMP_KIND_FP64)
-        /* FP64 also uses tolerance, but the tolerance is much smaller. */
+        /* ROADMAP BLOCK 3B: FP64 uses the same idea with a smaller tolerance. */
         double actual_value = (double)actual[i];
         double reference_value = (double)reference[i];
         double error;
@@ -59,26 +55,25 @@ static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
         error = fabs(actual_value - reference_value);
         tolerance = 1e-12 + 1e-12 * fabs(reference_value);
 #else
-        /* INT8 paths produce INT32 values, so exact equality is expected. */
+        /* ROADMAP BLOCK 3C: INT8/IME requires exact INT32 equality. */
         double error = fabs((double)((int64_t)actual[i] - (int64_t)reference[i]));
         double tolerance = 0.0;
 #endif
-        /* Keep the largest absolute error for reporting. */
+        /* ROADMAP BLOCK 4: Save the largest difference seen so far. */
         if (error > largest) {
             largest = error;
         }
 
-        /* If this element is outside tolerance, count it as a mismatch. */
+        /* If this value is too different, count one wrong output position. */
         if (error > tolerance) {
             ++mismatches;
         }
     }
 
-    /* Return both summary values to the benchmark driver. */
+    /* ROADMAP BLOCK 5: Return both validation results to the main program. */
     *max_error = largest;
     return mismatches;
 }
 
 #endif /* OPENMP_VALIDATION_H */
-
 

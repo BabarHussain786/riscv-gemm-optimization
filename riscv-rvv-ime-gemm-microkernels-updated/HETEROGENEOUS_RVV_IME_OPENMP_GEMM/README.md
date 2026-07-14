@@ -1,157 +1,113 @@
-# Heterogeneous OpenMP Tiled GEMM Benchmark
+# Heterogeneous RVV-IME OpenMP GEMM
 
-This module evaluates tiled GEMM execution on the K1 heterogeneous RISC-V platform. It compares homogeneous RVV execution, IME-cluster execution, and mixed RVV-IME execution under the same matrix size, tile size, and repetition protocol.
+This module compares homogeneous and heterogeneous GEMM execution on the K1. It keeps the existing RVV and IME micro-kernels unchanged and applies OpenMP only above the micro-kernel level.
 
-The mixed K1 mode, `k1-mixed-rvv-ime`, uses all cores 0-7. Cores 0-3 execute the native IME path, while cores 4-7 execute the RVV fallback path. OpenMP splits the output matrix `C` into column tiles; each worker computes disjoint output columns, so no two workers write the same region of `C`.
+## Execution Model
 
-## GEMM Decomposition
-
-```text
-Full operation:       C = C + A x B, for example M=N=K=1024
-OpenMP work tile:     one column block of C, for example 1024x32 or 1024x64
-Micro-kernel tile:    one existing 8x4 or 8x8 kernel update
-INT8 arithmetic:      INT8 x INT8 -> INT32 accumulation/output
-```
-
-The OpenMP tile size is controlled by `tile_N`. Smaller values, such as 16 or 32, give the scheduler more tiles to distribute across heterogeneous cores. In mixed mode, the default tile weights are:
+The output matrix `C` is divided into contiguous column tiles:
 
 ```text
-MIXED_IME_TILE_WEIGHT=4
-MIXED_RVV_TILE_WEIGHT=1
+tiles = ceil(N / tile_N)
 ```
 
-This gives IME-side workers larger tile claims while RVV-side workers still participate through the fallback path. Temporary B-tile buffers are allocated inside each OpenMP worker after the worker observes its CPU, giving thread-local first touch for these buffers. Platform-specific NUMA placement for global A, B, and C can be controlled externally when required.
-
-## Directory Layout
+For `N=1024` and `tile_N=32`, there are 32 OpenMP tiles. In mixed INT8 mode, the tiles are divided once using the static IME:RVV weights:
 
 ```text
-HETEROGENEOUS_RVV_IME_OPENMP_GEMM/
-  README.md
-  .gitignore
-  docs/
-    k1_heterogeneous_openmp_methodology.md
-    openmp_result_schema.md
-    reproducibility_checklist.md
-  src/
-    openmp_heterogeneous_gemm.c      main driver, config, helpers, timing, output
-    openmp_tile_scheduler.h          OpenMP tiling, thread/core assignment, mixed scheduling
-    openmp_kernel_dispatch.h         calls RVV/IME micro-kernels for each C tile
-    openmp_validation.h              serial reference and output comparison
-  scripts/
-    run_openmp_tiled_gemm_mode.sh
-    run_k1_heterogeneous_openmp_gemm_1024.sh
-    check_openmp_tiled_gemm_builds.sh
-  metadata/
-    openmp_tiled_gemm_kernel_manifest.csv
-  results/
-    generated logs and CSV files, ignored by git
+IME tiles = round(tiles * IME_WEIGHT / (IME_WEIGHT + RVV_WEIGHT))
+RVV tiles = tiles - IME tiles
+
+Default 4:1 split: IME=26 tiles, RVV=6 tiles
 ```
 
-Deeper documentation:
+OpenMP follows the K1 hierarchy:
 
 ```text
-docs/k1_heterogeneous_openmp_methodology.md  method, tile split, core mapping, NUMA notes
-docs/openmp_result_schema.md                raw CSV, summary CSV, and live-log meanings
-docs/reproducibility_checklist.md            board-side checks before reporting results
+outer team: 2 cluster controllers
+  cluster 0: 4 workers on cores 0-3, native IME path
+  cluster 1: 4 workers on cores 4-7, explicit RVV path
 ```
 
-## Execution Modes
+Each cluster runs `parallel for schedule(static)` over its fixed tile range. There is no global tile queue, atomic tile claim, or dynamic work scheduler. The IME team calls the native IME wrapper with hardware execution required; the RVV team calls the matching low-level RVV widening kernel directly. Because the two ranges contain different columns of `C`, workers never update the same output values.
 
-| Mode | Core group | Purpose |
+INT8 arithmetic is identical on both paths:
+
+```text
+C(i,j) = C(i,j) + sum_k A(i,k) * B(k,j)
+INT8 x INT8 -> INT32 accumulation and output
+```
+
+FP32 and FP64 use RVV kernels on the selected cores. Native IME is used only for INT8-to-INT32 GEMM.
+
+## Main Files
+
+```text
+src/openmp_heterogeneous_gemm.c   matrix setup, timing, validation, output
+src/openmp_cluster_execution.h    nested 2-cluster OpenMP and static split
+src/openmp_kernel_dispatch.h      one OpenMP tile -> selected micro-kernel
+src/openmp_validation.h           serial same-kernel comparison
+
+scripts/run_openmp_tiled_gemm_mode.sh
+scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
+scripts/check_openmp_tiled_gemm_builds.sh
+```
+
+## K1 Modes
+
+| Mode | Cores | Execution |
 |---|---:|---|
-| `k1-rvv` / `k1-rvv-all` | 0-7 | All-core RVV baseline |
+| `k1-rvv` | 0-7 | RVV all-core baseline |
 | `k1-rvv-only` | 4-7 | RVV-cluster baseline |
-| `k1-ime` | 0-3 | IME-cluster baseline |
-| `k1-mixed-rvv-ime` | 0-7 | Heterogeneous execution: IME on cores 0-3 and RVV fallback on cores 4-7 |
-| `k3-rvv` | 0-7 | K3 RVV run |
-| `k3-ime` | 8-15 | K3 IME run |
-| `k3-ime-cluster0` | 8-11 | First K3 IME cluster |
-| `k3-ime-cluster1` | 12-15 | Second K3 IME cluster |
-| `local` | unrestricted | Local build or inspection run |
+| `k1-ime` | 0-3 | native IME-cluster baseline |
+| `k1-mixed-rvv-ime` | 0-7 | nested IME and RVV cluster teams |
 
-## Final kernel filter
+## Run
 
-The final K1 OpenMP campaign uses ZVL_FILTER=128b by default. This keeps the submitted benchmark focused on the cleaned 128b kernel set. Use ZVL_FILTER=all only for exploratory local testing. Generated files go to `results/`; downloaded local result copies should stay outside the source tree.
-
-## Run the K1 Comparison Campaign
-
-From the repository root:
+From this directory:
 
 ```bash
-cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
+M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 \
 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
 
-Detached run with `nohup`:
+Detached execution:
 
 ```bash
-cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
-nohup bash -lc 'M=1024 N=1024 K=1024 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh' > results/k1_openmp_nohup_latest.log 2>&1 &
+nohup bash -lc 'M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh' > results/k1_openmp_nohup_latest.log 2>&1 &
 ```
 
-Run one mode only:
+One mode only:
 
 ```bash
 bash scripts/run_openmp_tiled_gemm_mode.sh k1-mixed-rvv-ime 1024 1024 1024 32 6
 ```
 
-Argument order:
+The runner rejects mixed execution unless exactly eight workers are available. It also fails when no buildable kernel source is found, so an empty campaign cannot be reported as successful.
+
+## Results
+
+The main analysis files are:
 
 ```text
-mode M N K tile_N runs
-```
-
-## Output Format
-
-The live log follows the same style as the single-core K1 benchmark:
-
-```text
-KERNEL: ime_kernel_8x4_zvl128b_lmul1_unroll4
-  MODE: K1 heterogeneous OpenMP RVV-IME execution
-  FAMILY: RVV_IME_IGEMM_INT8_I8I32_8x4
-  PATH: INT8 heterogeneous IME/RVV-fallback GEMM (INT8 x INT8 -> INT32)
-  TILE: 8x4 ZVL=128b LMUL=1 UNROLL=4
-  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=6
-  CORES: cores 0-3 execute IME path; cores 4-7 execute RVV fallback path
-    run 1: OK GOPS=... time=... threads=8 validation=1
-```
-
-Each mode writes raw and summary CSV files under `results/`. The K1 campaign also writes combined latest files:
-
-```text
-results/k1_openmp_heterogeneous_live_latest.log
 results/k1_openmp_heterogeneous_raw_latest.csv
 results/k1_openmp_heterogeneous_summary_latest.csv
 ```
 
-The summary CSV reports mean, median, min, max, standard deviation, and mean time for each kernel configuration. The full raw and summary schema is documented in `docs/openmp_result_schema.md`.
+Raw data records each run, matrix dimensions, tile width, timing, throughput, validation, worker placement, and the fixed IME/RVV tile split. Summary data reports mean, median, minimum, maximum, sample standard deviation, and timing for each kernel configuration.
+
+Mixed logs also print the fixed cluster ownership:
+
+```text
+STATIC_TILE_SPLIT=IME:26;RVV:6
+WORKER_PLACEMENT=0:cpu0:IME:...;...;7:cpu7:RVV:...
+```
 
 ## Correctness and Timing
 
-For each kernel, the first measured repetition performs an untimed serial same-kernel validation before timing the OpenMP tiled execution. INT8 outputs require exact INT32 equality. FP32 and FP64 use a small absolute-plus-relative tolerance. Later repetitions skip repeated validation unless `VALIDATE_EACH_RUN=1` is set.
+The first measured repetition compares the OpenMP result with an untimed serial execution of the same kernel. INT8 requires exact INT32 equality; FP32 and FP64 use absolute-plus-relative tolerance. Independent high-precision accuracy remains in the separate accuracy-validation module.
 
-The reported timing scope is `timed_parallel_tile_region`. It includes the OpenMP tiled region and kernel calls. For IME and mixed modes it also includes B-tile extraction, wrapper packing, native/fallback dispatch, execution, scattering, and cleanup. The complete methodology is documented in `docs/k1_heterogeneous_openmp_methodology.md`.
+The timed interval contains nested OpenMP team creation, static tile loops, required input packing, kernel execution, and output updates. Matrix allocation, OpenMP worker-buffer allocation, warmup, validation, and memory cleanup are outside the timed interval. Any temporary allocation performed internally by a selected micro-kernel remains part of that kernel's measured time.
 
-## Build Check
+Thread affinity is checked at runtime for mixed K1 mode: workers 0-3 must execute on cores 0-3 and workers 4-7 on cores 4-7. This cluster-aware placement combines exact core affinity with contiguous output ownership. Each campaign also records the available system memory nodes from `/sys/devices/system/node/online`.
 
-For a board-side reporting checklist, use `docs/reproducibility_checklist.md`.
-
-```bash
-bash HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/check_openmp_tiled_gemm_builds.sh
-```
-
-Useful controls:
-
-```bash
-OMP_NUM_THREADS=8       # override mode default
-OMP_PROC_BIND=close     # OpenMP binding policy
-OMP_PLACES=cores        # OpenMP placement definition
-OMP_DYNAMIC=false       # require requested team size
-OMP_VALIDATE=0          # disable serial same-kernel validation
-VALIDATE_EACH_RUN=1     # validate every timed repetition
-ENABLE_MF2=1            # include experimental native IME mf2 path
-```
-
-
-
+See `docs/k1_heterogeneous_openmp_methodology.md` for the complete experimental method.

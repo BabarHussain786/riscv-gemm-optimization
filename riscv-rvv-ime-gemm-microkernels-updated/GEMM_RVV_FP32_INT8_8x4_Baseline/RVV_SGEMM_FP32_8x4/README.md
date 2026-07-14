@@ -11,7 +11,7 @@ FP32 SGEMM microkernel family for benchmarking FP32 x FP32 -> FP32 with the 8x4 
 | Backend | RVV |
 | Tile shape | 8x4 |
 | Variant count | 20 |
-| ZVL targets | 256b |
+| ZVL target | 256b |
 | LMUL labels | lmulmf2, lmul1, lmul2, lmul4, lmul8 |
 | Unroll factors | unroll1, unroll2, unroll4, unroll8 |
 | Benchmark driver | `sgemm_bench.c` |

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Compile-only smoke test for the OpenMP module. It checks that the selected
-# FP64, FP32, INT8 RVV, IME, and mixed wrapper builds still link cleanly.
+# FP64, FP32, INT8 RVV, native IME, and explicit mixed-path builds link cleanly.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNNER="${SCRIPT_DIR}/run_openmp_tiled_gemm_mode.sh"
@@ -16,7 +16,7 @@ CHECK_MODES="${CHECK_MODES:-k1-rvv k1-rvv-only k1-ime k1-mixed-rvv-ime}"
 export BUILD_ONLY=1
 export OMP_VALIDATE=0
 export OMP_WARMUP=0
-export ZVL_FILTER="${ZVL_FILTER:-128b}"
+export ZVL_FILTER="256b"
 
 for mode in ${CHECK_MODES}; do
     echo "============================================================"

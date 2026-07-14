@@ -1,74 +1,72 @@
 # K1 Heterogeneous OpenMP GEMM Methodology
 
-This note documents the experimental method implemented by the OpenMP tiled GEMM benchmark. The goal is to compare non-heterogeneous and heterogeneous execution on the same K1 matrix-multiplication workload.
+## Objective
 
-## Execution Model
+The experiment measures whether the K1 IME-capable cluster and RVV-only cluster can compute one dense INT8 GEMM concurrently with low scheduling overhead. Existing micro-kernels perform the arithmetic; OpenMP only divides the output matrix and maps work to cores.
 
-The benchmark treats the K1 as two execution domains:
+## Matrix Partition
+
+For `C[M x N]`, `tile_N` columns form one OpenMP tile:
 
 ```text
-cores 0-3: IME-capable domain
-cores 4-7: RVV-only domain
+number of tiles = ceil(N / tile_N)
+tile t owns columns [t*tile_N, min(N, (t+1)*tile_N))
 ```
 
-The heterogeneous mode, `k1-mixed-rvv-ime`, uses both domains at the same time. IME-capable cores execute the native IME INT8 path. RVV-only cores execute the RVV fallback path. Both paths compute the same mathematical operation for INT8 GEMM:
+Tiles are contiguous and disjoint. Therefore each output element has exactly one owner and no lock is required for `C`.
+
+## Nested Static Execution
+
+Mixed mode creates two nested OpenMP levels:
+
+```text
+Level 1: two cluster controllers
+Level 2: four workers per cluster with schedule(static)
+```
+
+Cluster 0 is pinned to cores 0-3 and calls the native IME wrapper with hardware execution required. Cluster 1 is pinned to cores 4-7 and directly calls the matching low-level RVV widening kernel. The runtime placement and completed tile count of every worker are recorded.
+
+The tile boundary is calculated once:
+
+```text
+T_IME = round(T * W_IME / (W_IME + W_RVV))
+T_RVV = T - T_IME
+```
+
+`W_IME=4` and `W_RVV=1` are the default starting values. They describe a static workload ratio, not dynamic chunk sizes. Changing these two values changes the balance without changing the OpenMP structure.
+
+## Kernel Dispatch
+
+Each OpenMP iteration computes one `C[M x tile_N]` column strip. In mixed mode, cores 0-3 call the native IME wrapper with a compact B strip. Cores 4-7 pack canonical A and the owned B strip into the matching RVV layout, then call the RVV widening micro-kernel directly. Both paths apply the selected 8x4 or 8x8 kernel family.
+
+Both paths compute:
 
 ```text
 C(i,j) = C(i,j) + sum_k A(i,k) * B(k,j)
-input:  INT8 A and INT8 B
-output: INT32 C with INT32 accumulation
 ```
 
-The FP32 and FP64 paths are RVV-only baselines because the IME path in this project targets INT8-to-INT32 matrix multiplication.
+with INT8 inputs and INT32 accumulation/output.
 
-## Tile Decomposition
+## Timing
 
-OpenMP parallelism is applied above the micro-kernel level. The output matrix `C` is split by column blocks. If `M=N=K=1024` and `tile_N=32`, then the `1024 x 1024` output matrix is divided into 32 column tiles, each with shape `1024 x 32`.
+Timed work includes nested OpenMP team creation, static loop execution, required input packing, kernel execution, and writes to `C`. Main-matrix and OpenMP worker-buffer allocation, initialization, warmup, serial validation, and cleanup are excluded. Temporary allocation or packing performed inside a selected kernel remains included. Every compared mode uses the same `M`, `N`, `K`, `tile_N`, and repetition count.
+
+## Validation
+
+The first repetition compares the OpenMP output with an untimed serial run of the same selected kernel. INT8 comparison is exact; FP32 and FP64 use an absolute-plus-relative tolerance. This detects tile-boundary, dispatch, and parallel assembly errors. Independent high-precision numerical validation is performed by the separate accuracy module.
+
+## Cluster-Aware Placement
+
+Contiguous tile ranges preserve stable output ownership and avoid inter-cluster write sharing. Mixed workers are pinned to exact K1 cores, and OpenMP-owned worker buffers are allocated before timing. The available system memory-node list is recorded in each campaign log.
+
+## Required Run Checks
+
+A mixed result is valid only when all conditions hold:
 
 ```text
-complete output: C[1024 x 1024]
-OpenMP tile:     C[1024 x tile_N]
-micro-kernel:    existing 8x4 or 8x8 kernel update
+inner team sizes: 4 IME workers and 4 RVV workers
+worker CPUs:      0,1,2,3 and 4,5,6,7
+IME tile total:   equals the fixed IME range
+RVV tile total:   equals the fixed RVV range
+validation:       mismatch_count = 0
 ```
-
-Each OpenMP worker claims one or more column tiles and writes only its assigned columns of `C`. This avoids write races because no two workers update the same output columns.
-
-## Heterogeneous Scheduling
-
-The mixed scheduler uses dynamic tile assignment. Each worker first observes the CPU on which it is running. On K1, cores 0-3 are treated as IME workers and cores 4-7 are treated as RVV fallback workers.
-
-The default scheduling weights are:
-
-```text
-MIXED_IME_TILE_WEIGHT=4
-MIXED_RVV_TILE_WEIGHT=1
-```
-
-This means an IME worker claims a larger tile chunk than an RVV worker. The purpose is not to force a fixed static split, but to let the faster IME-capable cores receive more work while keeping RVV cores active on the same global GEMM.
-
-## NUMA and Locality Considerations
-
-The benchmark allocates temporary B-tile buffers inside each OpenMP worker after the worker observes its CPU. This gives local first-touch behavior for the temporary per-worker buffers. These buffers are important in IME and mixed modes because the IME wrapper expects a contiguous K-major B tile.
-
-The global matrices `A`, `B`, and `C` are still allocated by the process before the parallel region. If a platform exposes stronger NUMA behavior, external memory-placement tools or platform-specific allocators can be used to bind global matrix pages to the preferred memory domain. The benchmark records worker placement so that performance can be interpreted together with the actual core-domain assignment.
-
-## Compared Cases
-
-The K1 campaign reports four execution cases:
-
-```text
-k1-rvv             RVV kernels on cores 0-7
-k1-rvv-only        RVV kernels on cores 4-7
-k1-ime             native IME kernels on cores 0-3
-k1-mixed-rvv-ime   native IME on cores 0-3 plus RVV fallback on cores 4-7
-```
-
-These cases separate portable vector execution, cluster-local IME execution, and true heterogeneous execution.
-
-## Validation Meaning
-
-For each kernel configuration, the first measured repetition validates the OpenMP tiled result against an untimed serial same-kernel execution. INT8 outputs require exact INT32 equality. FP32 and FP64 use a small absolute-plus-relative tolerance. This check validates the tiled OpenMP assembly and dispatch logic. Independent numerical accuracy against a higher-precision reference remains part of the separate accuracy-checking workflow.
-
-## Final Submitted Kernel Set
-
-The OpenMP scripts use ZVL_FILTER=128b by default. This removes exploratory non-128b variants from the final campaign while keeping the same OpenMP tiling method, core mapping, validation method, and result schema. The filter can be changed to all only for local experiments.

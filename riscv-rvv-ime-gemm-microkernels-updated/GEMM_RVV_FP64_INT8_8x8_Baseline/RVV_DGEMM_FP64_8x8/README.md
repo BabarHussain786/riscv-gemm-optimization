@@ -11,7 +11,7 @@ FP64 DGEMM microkernel family for benchmarking FP64 x FP64 -> FP64 with the 8x8 
 | Backend | RVV |
 | Tile shape | 8x8 |
 | Variant count | 32 |
-| ZVL targets | 128b, 256b |
+| ZVL target | 256b |
 | LMUL labels | lmul1, lmul2, lmul4, lmul8 |
 | Unroll factors | unroll1, unroll2, unroll4, unroll8 |
 | Benchmark driver | `dgemm_bench.c` |
@@ -43,4 +43,4 @@ make clean && make
 
 ## Notes
 
-This family evaluates FP64 RVV behavior for the 8x8 tile shape across two ZVL targets.
+This family evaluates FP64 RVV behavior for the 8x8 tile shape using the ZVL256 target.

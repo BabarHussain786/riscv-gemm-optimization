@@ -14,10 +14,8 @@ M="${M:-1024}"
 N="${N:-1024}"
 K="${K:-1024}"
 RUNS="${RUNS:-6}"
-TILE_N_RVV="${TILE_N_RVV:-64}"
-TILE_N_IME="${TILE_N_IME:-64}"
-TILE_N_MIXED="${TILE_N_MIXED:-32}"
-ZVL_FILTER="${ZVL_FILTER:-128b}"
+TILE_N="${TILE_N:-32}"
+ZVL_FILTER="256b"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 CAMPAIGN_DIR="${RESULT_ROOT}/k1_openmp_heterogeneous_campaign_${M}_${STAMP}"
 CAMPAIGN_LOG="${CAMPAIGN_DIR}/k1_openmp_heterogeneous_live_${M}_runs${RUNS}_${STAMP}.log"
@@ -62,6 +60,11 @@ run_mode()
     log_campaign "MODE=${mode} M=${M} N=${N} K=${K} tile_N=${tile_n} runs=${RUNS}"
     log_campaign "============================================================"
 
+    # Remove old aliases so a failed mode can never reuse stale CSV data.
+    rm -f "${RESULT_ROOT}/openmp_raw_latest_${mode}.csv" \
+          "${RESULT_ROOT}/openmp_summary_latest_${mode}.csv" \
+          "${RESULT_ROOT}/openmp_live_latest_${mode}.log"
+
     bash "${RUNNER}" "${mode}" "${M}" "${N}" "${K}" "${tile_n}" "${RUNS}" 2>&1 | tee -a "${CAMPAIGN_LOG}"
     rc=${PIPESTATUS[0]}
 
@@ -71,7 +74,7 @@ run_mode()
     if [ "${rc}" -eq 0 ]; then
         log_campaign "MODE_DONE=${mode} status=OK"
     else
-        log_campaign "MODE_DONE=${mode} status=CHECK_CSV rc=${rc}"
+        log_campaign "MODE_DONE=${mode} status=FAILED rc=${rc}"
     fi
 
     return "${rc}"
@@ -80,7 +83,8 @@ run_mode()
 log_campaign "K1 OpenMP heterogeneous-versus-baseline GEMM campaign"
 log_campaign "Matrix: M=${M} N=${N} K=${K} runs=${RUNS}"
 log_campaign "Comparison modes: RVV all-core, RVV-cluster, IME-cluster, mixed IME/RVV"
-log_campaign "Mixed policy: IME tile weight=${MIXED_IME_TILE_WEIGHT:-4}, RVV tile weight=${MIXED_RVV_TILE_WEIGHT:-1}"
+log_campaign "Common OpenMP tile width: tile_N=${TILE_N}"
+log_campaign "Static mixed split: IME weight=${MIXED_IME_TILE_WEIGHT:-4}, RVV weight=${MIXED_RVV_TILE_WEIGHT:-1}"
 log_campaign "Kernel filter: ZVL=${ZVL_FILTER}"
 log_campaign "Output folder: ${CAMPAIGN_DIR}"
 
@@ -88,20 +92,24 @@ export ZVL_FILTER
 
 status=0
 
-run_mode k1-rvv "${TILE_N_RVV}" "All-core RVV OpenMP baseline: cores 0-7 execute RVV kernels" || status=1
-run_mode k1-rvv-only "${TILE_N_RVV}" "RVV-cluster OpenMP baseline: cores 4-7 execute RVV kernels" || status=1
-run_mode k1-ime "${TILE_N_IME}" "IME-cluster OpenMP baseline: cores 0-3 execute native IME kernels" || status=1
+run_mode k1-rvv "${TILE_N}" "All-core RVV OpenMP baseline: cores 0-7 execute RVV kernels" || status=1
+run_mode k1-rvv-only "${TILE_N}" "RVV-cluster OpenMP baseline: cores 4-7 execute RVV kernels" || status=1
+run_mode k1-ime "${TILE_N}" "IME-cluster OpenMP baseline: cores 0-3 execute native IME kernels" || status=1
 
 export MIXED_IME_TILE_WEIGHT="${MIXED_IME_TILE_WEIGHT:-4}"
 export MIXED_RVV_TILE_WEIGHT="${MIXED_RVV_TILE_WEIGHT:-1}"
-run_mode k1-mixed-rvv-ime "${TILE_N_MIXED}" "Heterogeneous OpenMP run: cores 0-3 use IME and cores 4-7 use RVV fallback" || status=1
+run_mode k1-mixed-rvv-ime "${TILE_N}" "Heterogeneous OpenMP run: nested 4-core IME and 4-core RVV teams" || status=1
 
 cp "${CAMPAIGN_LOG}" "${RESULT_ROOT}/k1_openmp_heterogeneous_live_latest.log"
 cp "${COMBINED_RAW}" "${RESULT_ROOT}/k1_openmp_heterogeneous_raw_latest.csv"
 cp "${COMBINED_SUMMARY}" "${RESULT_ROOT}/k1_openmp_heterogeneous_summary_latest.csv"
 
 log_campaign "============================================================"
-log_campaign "DONE"
+if [ "${status}" -eq 0 ]; then
+    log_campaign "DONE status=OK"
+else
+    log_campaign "DONE status=FAILED"
+fi
 log_campaign "Combined live log: ${CAMPAIGN_LOG}"
 log_campaign "Combined raw CSV: ${COMBINED_RAW}"
 log_campaign "Combined summary CSV: ${COMBINED_SUMMARY}"

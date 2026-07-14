@@ -1,21 +1,21 @@
 /*
- * Heterogeneous OpenMP GEMM benchmark.
+ * MAIN BENCHMARK ROADMAP
+ * ======================
+ * This is the program that joins all parts of the experiment.
  *
- * This is the main executable file. It prepares matrices, starts the timed
- * OpenMP tiled execution, validates the result, and prints performance.
+ * Step 1 -> Read matrix sizes M, N, K and output-strip width tile_N.
+ * Step 2 -> Create and fill input matrices A and B and output matrix C.
+ * Step 3 -> Prepare private work buffers for the OpenMP workers.
+ * Step 4 -> Start the timed OpenMP computation.
+ * Step 5 -> Compare the parallel answer with a serial answer.
+ * Step 6 -> Calculate GFLOPS/GOPS and print results for the scripts.
+ * Step 7 -> Release all allocated memory.
  *
- * Clean source map:
- *   openmp_heterogeneous_gemm.c  -> main program, config, helpers, data setup
- *   openmp_tile_scheduler.h      -> OpenMP threads, C-column tiles, core mapping
- *   openmp_kernel_dispatch.h     -> calls the selected RVV or IME micro-kernel
- *   openmp_validation.h          -> serial reference and result comparison
- *
- * Simple flow:
- *   Step 1 -> read M, N, K, and tile_N.
- *   Step 2 -> allocate A, B, C.
- *   Step 3 -> split C into column tiles.
- *   Step 4 -> OpenMP workers compute different C tiles.
- *   Step 5 -> validate C and print time/GFLOPS/GOPS.
+ * The detailed jobs are separated into four readable source files:
+ *   openmp_heterogeneous_gemm.c -> setup, timing, and printed results
+ *   openmp_cluster_execution.h  -> OpenMP teams and static tile ownership
+ *   openmp_kernel_dispatch.h    -> IME or RVV kernel selection
+ *   openmp_validation.h         -> output comparison
  */
 
 #define _GNU_SOURCE
@@ -30,21 +30,22 @@
 #include <string.h>
 #include <time.h>
 
-/* OpenBLAS-style integer type used by the micro-kernel APIs. */
+/* ROADMAP BLOCK 1: Common type used by every selected micro-kernel. */
 typedef long BLASLONG;
 
 /*
  * KERNEL_SYMBOL is supplied by the shell script at compile time.
- * Example: -DKERNEL_SYMBOL=dgemm_kernel_8x4_zvl128b_lmul4_unroll1
+ * Example: -DKERNEL_SYMBOL=dgemm_kernel_8x4_zvl256b_lmul4_unroll1
  */
 #ifndef KERNEL_SYMBOL
 #error "KERNEL_SYMBOL must be defined by the build script"
 #endif
 
 /*
- * Compile-time mode selection.
- * The same benchmark file is compiled many times with different -D flags.
- * Each mode chooses datatype, output type, metric name, and kernel prototype.
+ * ROADMAP BLOCK 2: Choose one arithmetic mode while compiling
+ * ------------------------------------------------------------
+ * The script compiles this file once for each kernel family.
+ * The selected mode tells C which input type, output type, and metric to use.
  */
 #if defined(OMP_KIND_FP32)
 typedef float INPUT_T;
@@ -89,36 +90,9 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 #error "Native IME OpenMP builds require full K-major input"
 #endif
 
-/*
- * K1 mixed-core map.
- * Cores 0-3 are treated as IME-capable; cores 4-7 are treated as RVV.
- */
-#if defined(OMP_KIND_INT8_MIXED)
-#ifndef MIXED_IME_CORE_FIRST
-#define MIXED_IME_CORE_FIRST 0
-#endif
-#ifndef MIXED_IME_CORE_LAST
-#define MIXED_IME_CORE_LAST 3
-#endif
-#ifndef MIXED_IME_TILE_WEIGHT
-#define MIXED_IME_TILE_WEIGHT 4
-#endif
-#ifndef MIXED_RVV_TILE_WEIGHT
-#define MIXED_RVV_TILE_WEIGHT 1
-#endif
+/* ROADMAP BLOCK 3: Small helper functions used by the main program. */
 
-static int mixed_cpu_uses_ime(int cpu)
-{
-    return cpu >= MIXED_IME_CORE_FIRST && cpu <= MIXED_IME_CORE_LAST;
-}
-
-static BLASLONG mixed_tile_chunk_for_cpu(int cpu)
-{
-    return mixed_cpu_uses_ime(cpu) ? MIXED_IME_TILE_WEIGHT : MIXED_RVV_TILE_WEIGHT;
-}
-#endif
-
-/* Read current monotonic time in seconds. Used before and after OpenMP work. */
+/* Read a steady clock before and after the OpenMP work. */
 static double now_sec(void)
 {
     struct timespec ts;
@@ -190,9 +164,16 @@ static void fill_output(OUTPUT_T *x, size_t n)
 }
 #endif
 
+/*
+ * ROADMAP BLOCK 4: Bring the three supporting parts into this program
+ * -------------------------------------------------------------------
+ * They are headers because each compiled kernel needs the same small framework.
+ */
 #include "openmp_kernel_dispatch.h"
 #include "openmp_validation.h"
-#include "openmp_tile_scheduler.h"
+#include "openmp_cluster_execution.h"
+
+/* ROADMAP BLOCK 5: Main experiment starts here. */
 int main(int argc, char **argv)
 {
     /* Step 1: Read the matrix size from the command line.
@@ -236,6 +217,10 @@ int main(int argc, char **argv)
     /* Filled by OpenMP: how many threads actually entered the parallel region. */
     int actual_threads = 0;
 
+    /* Fixed mixed-mode ownership. Their sum equals the OpenMP tile count. */
+    BLASLONG ime_assigned_tiles = 0;
+    BLASLONG rvv_assigned_tiles = 0;
+
     /* Maximum OpenMP threads allowed by the runtime/environment. */
     int max_threads;
 
@@ -245,7 +230,10 @@ int main(int argc, char **argv)
     /* worker_tiles[tid] stores how many C-column tiles thread tid computed. */
     BLASLONG *worker_tiles;
 
-    /* worker_b_tile[tid] is a private packed B buffer for IME-style tile calls. */
+    /* RVV workers in mixed mode use a private packed A buffer. */
+    INPUT_T **worker_a_pack;
+
+    /* IME and mixed workers use a private compact/packed B buffer. */
     INPUT_T **worker_b_tile;
 
     /* Human-readable place where failure happened; printed in the log. */
@@ -294,8 +282,8 @@ int main(int argc, char **argv)
     OUTPUT_T *C_reference = NULL;
 
     /* Step 8: Reject invalid problem sizes early.
-     * tile_N must be a multiple of 8 because the micro-kernels are 8-row based
-     * and the IME packing path expects clean tile boundaries.
+     * tile_N is a multiple of 8 so both 8x4 and 8x8 kernel families receive
+     * complete output-column groups except at the final matrix boundary.
      */
     if (M <= 0 || N <= 0 || K <= 0 || tile_n <= 0 || tile_n % 8 != 0) {
         fprintf(stderr, "Usage: %s M N K [tile_N]\n", argv[0]);
@@ -411,16 +399,23 @@ int main(int argc, char **argv)
      * worker_cpu tells which CPU each thread actually used.
      * worker_tiles tells how much work each thread completed.
      */
+    /* Mixed mode always creates two nested teams of four workers. */
+#if defined(OMP_KIND_INT8_MIXED)
+    max_threads = 8;
+#else
     max_threads = omp_get_max_threads();
+#endif
     /* Allocate CPU-id array: one entry per possible OpenMP thread. */
     worker_cpu = (int *)malloc((size_t)max_threads * sizeof(int));
 
     /* Allocate tile counters, initialized to zero by calloc. */
     worker_tiles = (BLASLONG *)calloc((size_t)max_threads, sizeof(BLASLONG));
 
-    /* Allocate array of per-worker B-tile pointers, initialized to NULL. */
+    /* Allocate arrays of per-worker scratch pointers, initialized to NULL. */
+    worker_a_pack = (INPUT_T **)calloc((size_t)max_threads, sizeof(INPUT_T *));
     worker_b_tile = (INPUT_T **)calloc((size_t)max_threads, sizeof(INPUT_T *));
-    if (worker_cpu == NULL || worker_tiles == NULL || worker_b_tile == NULL) {
+    if (worker_cpu == NULL || worker_tiles == NULL ||
+        worker_a_pack == NULL || worker_b_tile == NULL) {
         fprintf(stderr, "worker metadata allocation failed\n");
         free(A);
         free(B);
@@ -429,22 +424,24 @@ int main(int argc, char **argv)
         free(C_reference);
         free(worker_cpu);
         free(worker_tiles);
+        free(worker_a_pack);
         free(worker_b_tile);
         return 1;
     }
 
-    /* Step 18: Initialize worker metadata and IME private B buffers.
-     * IME kernels need B tiles in a compact packed layout, so each worker gets
-     * its own buffer to avoid races between OpenMP threads.
+    /* Step 18: Initialize worker metadata and private packing buffers.
+     * IME workers use compact B tiles. In mixed mode, RVV workers additionally
+     * pack A before calling the low-level RVV kernel explicitly.
      */
     for (int i = 0; i < max_threads; ++i) {
         /* -1 means this worker has not reported a real CPU id yet. */
         worker_cpu[i] = -1;
-#if defined(OMP_KIND_INT8_IME)
+#if defined(OMP_KIND_INT8_IME) || defined(OMP_KIND_INT8_MIXED)
         worker_b_tile[i] = (INPUT_T *)aligned_bytes(worker_b_tile_bytes);
         if (worker_b_tile[i] == NULL) {
-            fprintf(stderr, "IME worker B-tile allocation failed\n");
-            for (int j = 0; j < i; ++j) {
+            fprintf(stderr, "worker B-tile allocation failed\n");
+            for (int j = 0; j <= i; ++j) {
+                free(worker_a_pack[j]);
                 free(worker_b_tile[j]);
             }
             free(A);
@@ -454,18 +451,45 @@ int main(int argc, char **argv)
             free(C_reference);
             free(worker_cpu);
             free(worker_tiles);
+            free(worker_a_pack);
             free(worker_b_tile);
             return 1;
+        }
+        /* Keep allocation and initialization outside the timed region. */
+        memset(worker_b_tile[i], 0, worker_b_tile_bytes);
+#endif
+#if defined(OMP_KIND_INT8_MIXED)
+        /* Only workers 4-7 execute the explicit RVV path. */
+        if (i >= 4) {
+            worker_a_pack[i] = (INPUT_T *)aligned_bytes(bytesA);
+            if (worker_a_pack[i] == NULL) {
+                fprintf(stderr, "RVV worker A-pack allocation failed\n");
+                for (int j = 0; j <= i; ++j) {
+                    free(worker_a_pack[j]);
+                    free(worker_b_tile[j]);
+                }
+                free(A);
+                free(B);
+                free(C);
+                free(C_initial);
+                free(C_reference);
+                free(worker_cpu);
+                free(worker_tiles);
+                free(worker_a_pack);
+                free(worker_b_tile);
+                return 1;
+            }
+            memset(worker_a_pack[i], 0, bytesA);
         }
 #endif
     }
 
-    /* Step 19: Timed OpenMP tile region.
+    /* ROADMAP BLOCK 6: Timed OpenMP tile region.
      * This is the main heterogeneous part.
      * Think of C as a large page and tile_N as the width of one strip.
      * For N=1024 and tile_N=32, the page has 32 strips.
      * In mixed mode, cores 0-3 compute their strips through IME and
-     * cores 4-7 compute their strips through RVV fallback.
+     * cores 4-7 compute their strips through the explicit RVV kernel call.
      * Because each strip is a different set of C columns, two cores do not
      * write the same C values at the same time.
      */
@@ -473,11 +497,13 @@ int main(int argc, char **argv)
     t0 = now_sec();
     {
         int parallel_return = run_openmp_tile_region(M, N, K, tile_n, tiles,
-                                                     worker_b_tile_bytes,
                                                      A, B, C,
                                                      worker_cpu, worker_tiles,
+                                                     worker_a_pack,
                                                      worker_b_tile,
                                                      &actual_threads,
+                                                     &ime_assigned_tiles,
+                                                     &rvv_assigned_tiles,
                                                      &failure_stage);
 
         /* Keep an earlier warmup/reference error if one already happened. */
@@ -488,10 +514,11 @@ int main(int argc, char **argv)
     /* Take timestamp immediately after all OpenMP workers finish. */
     t1 = now_sec();
 
-    /* Step 20: Convert wall-clock timestamps into elapsed seconds. */
+    /* ROADMAP BLOCK 7: Turn the timestamps into performance. */
+    /* Convert wall-clock timestamps into elapsed seconds. */
     time_sec = t1 - t0;
 
-    /* Step 21: Compare OpenMP output against the serial reference.
+    /* ROADMAP BLOCK 8: Check the parallel answer.
      * A mismatch means the tile splitting or kernel dispatch produced a wrong C value.
      */
     if (validation_enabled && validation_rc == 0 && kernel_return == 0) {
@@ -509,19 +536,24 @@ int main(int argc, char **argv)
      * Every output value C(i,j) is a dot product.
      * One dot product uses K multiplications and K additions.
      * That is why GEMM is counted as about 2*M*N*K operations.
-     * The unit name is selected in config.h:
-     * GFLOPS for FP32/FP64 and GOPS for INT8/IME.
+     * The compile-time datatype mode selects GFLOPS for FP32/FP64 or
+     * GOPS for INT8/IME.
      */
     metric_value = (!run_failed && time_sec > 0.0)
         ? (2.0 * (double)M * (double)N * (double)K) / (time_sec * 1e9)
         : 0.0;
 
-    /* Step 24: Print human-readable run information. */
+    /* ROADMAP BLOCK 9: Print readable and CSV results. */
+    /* Print human-readable run information. */
     printf("M=%ld N=%ld K=%ld tile_N=%ld tiles=%ld threads=%d\n",
            M, N, K, tile_n, tiles, actual_threads);
     printf("TIMING_SCOPE=timed_parallel_tile_region\n");
     printf("VALIDATION_METHOD=%s\n", validation_enabled ? VALIDATION_NAME : "DISABLED");
     printf("FAILURE_STAGE=%s\n", failure_stage);
+#if defined(OMP_KIND_INT8_MIXED)
+    printf("STATIC_TILE_SPLIT=IME:%ld;RVV:%ld\n",
+           ime_assigned_tiles, rvv_assigned_tiles);
+#endif
 
     /* Step 25: Print where each worker ran and how many tiles it completed.
      * Example output item: 0:cpu2:IME:tiles8
@@ -532,7 +564,7 @@ int main(int argc, char **argv)
 #if defined(OMP_KIND_INT8_MIXED)
         printf("%s%d:cpu%d:%s:tiles%ld", (i == 0) ? "" : ";",
                i, worker_cpu[i],
-               mixed_cpu_uses_ime(worker_cpu[i]) ? "IME" : "RVV",
+               (i < 4) ? "IME" : "RVV",
                worker_tiles[i]);
 #else
         printf("%s%d:cpu%d:tiles%ld", (i == 0) ? "" : ";",
@@ -553,7 +585,7 @@ int main(int argc, char **argv)
            time_sec, metric_value, kernel_return, failure_stage, METRIC_NAME,
            mismatch_count, max_error, actual_threads);
 
-    /* Step 28: Free all memory before leaving. */
+    /* ROADMAP BLOCK 10: Free all memory before leaving. */
     free(A);
     free(B);
     free(C);
@@ -562,13 +594,12 @@ int main(int argc, char **argv)
     free(worker_cpu);
     free(worker_tiles);
     for (int i = 0; i < max_threads; ++i) {
+        free(worker_a_pack[i]);
         free(worker_b_tile[i]);
     }
+    free(worker_a_pack);
     free(worker_b_tile);
 
     /* Step 29: Return 0 only when timing and validation both succeeded. */
     return run_failed ? 1 : 0;
 }
-
-
-
