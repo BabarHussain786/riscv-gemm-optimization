@@ -1,68 +1,74 @@
 # Reproducibility Checklist
 
-Use this checklist before reporting OpenMP heterogeneous results.
+Use these checks before reporting K1 OpenMP results.
 
-1. Confirm the board core map matches the script assumptions:
+## 1. Hardware Map
 
 ```text
-K1 IME-capable cores: 0-3
-K1 RVV-only cores:    4-7
+IME-capable cores: 0-3
+RVV-only cores:    4-7
 ```
 
-2. Confirm CPU affinity is available:
+Confirm affinity support:
 
 ```bash
 command -v taskset
 ```
 
-3. Run the compile-only check:
+## 2. Build Check
 
 ```bash
-bash HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/check_openmp_tiled_gemm_builds.sh
+bash scripts/check_openmp_tiled_gemm_builds.sh
 ```
 
-4. Confirm that nested OpenMP is enabled:
+## 3. Complete Campaign
 
 ```bash
-export OMP_MAX_ACTIVE_LEVELS=2
-```
-
-5. Record the available system memory nodes:
-
-```bash
-cat /sys/devices/system/node/online
-```
-
-The K1 campaign uses cluster-aware placement through exact core affinity and
-separate output ownership.
-
-6. Run the K1 campaign with one common tile width:
-
-```bash
-cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
 M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 \
 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
+DYNAMIC_CHUNK=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
 
-7. Check completion. Accept only `status=OK`:
+Set `RUN_DYNAMIC=0` only when a static-only campaign is intentionally required.
+
+## 4. Completion
 
 ```bash
-grep -R "DONE status=" results/*/openmp_live_*.log results/k1_openmp_heterogeneous_live_latest.log
+grep -R "DONE status=" results/*/openmp_live_*.log \
+  results/k1_openmp_heterogeneous_live_latest.log
 ```
 
-8. Use these files for analysis:
+Accept only `DONE status=OK`.
+
+The live log must also record `COMPILER`, `BUILD_FLAGS`, `PRIMARY_SOURCE`, and,
+for mixed mode, `MIXED_RVV_SOURCE`.
+
+## 5. Placement, Path, and Output Checks
+
+```text
+actual_threads = 8
+workers 0-3 -> CPUs 0-3 before and after execution -> IME
+workers 4-7 -> CPUs 4-7 before and after execution -> RVV
+IME completed strips + RVV completed strips = ceil(N / tile_N)
+mismatch_count = 0
+reference_overflow_count = 0
+```
+
+The printed count unit must be `TILE_COUNT_UNIT=output_column_strips`. Confirm that native modes print `IME_NATIVE_REQUIRED` or `IME_NATIVE_PLUS_RVV_EXPLICIT`; a native IME result must never be accepted as an automatic RVV fallback.
+
+Static mode must also satisfy:
+
+```text
+T_IME = round(T * W_IME / (W_IME + W_RVV))
+T_RVV = T - T_IME
+```
+
+Dynamic mode may produce a different IME/RVV split on each repetition. Record `schedule_chunk` and the observed `output_strip_distribution` for every run.
+
+## 6. Analysis Files
 
 ```text
 results/k1_openmp_heterogeneous_raw_latest.csv
 results/k1_openmp_heterogeneous_summary_latest.csv
-```
-
-9. Inspect the mixed log and raw CSV:
-
-```text
-STATIC_TILE_SPLIT must equal the sum of completed worker tiles.
-Workers 0-3 must run on cores 0-3 through IME.
-Workers 4-7 must run on cores 4-7 through the explicit RVV kernel call.
-MISMATCH_COUNT must be 0.
 ```

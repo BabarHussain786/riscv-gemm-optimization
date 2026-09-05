@@ -16,25 +16,28 @@
  * This file does not decide who owns a tile. It only calls the correct kernel.
  */
 
-#if defined(OMP_KIND_INT8_MIXED)
+#if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64) || \
+    defined(OMP_KIND_INT8_RVV) || defined(OMP_KIND_INT8_MIXED)
 /*
  * ROADMAP BLOCK 1: Required names and tile shapes for mixed INT8 execution
  * -------------------------------------------------------------------------
  * The build script supplies the matching IME and RVV function names.
  */
+#ifndef OMP_KERNEL_MR
+#error "OMP_KERNEL_MR must describe the RVV micro-kernel row tile"
+#endif
+#ifndef OMP_KERNEL_NR
+#error "OMP_KERNEL_NR must describe the RVV micro-kernel column tile"
+#endif
+
+#if defined(OMP_KIND_INT8_MIXED)
 #ifndef RVV_KERNEL_SYMBOL
 #error "RVV_KERNEL_SYMBOL must name the matching RVV widening kernel"
 #endif
-#ifndef OMP_KERNEL_MR
-#error "OMP_KERNEL_MR must describe the mixed micro-kernel row tile"
-#endif
-#ifndef OMP_KERNEL_NR
-#error "OMP_KERNEL_NR must describe the mixed micro-kernel column tile"
-#endif
-
 int RVV_KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
                       int32_t alpha, int8_t *A, int8_t *B,
                       int32_t *C, BLASLONG ldc);
+#endif
 
 /*
  * ROADMAP BLOCK 2: Pick the next RVV row or column block
@@ -55,10 +58,10 @@ static BLASLONG packed_block_size(BLASLONG left, BLASLONG full_block)
  * The original matrices are easy to understand, but the low-level RVV kernel
  * expects packed blocks. Each worker packs into its own private memory.
  */
-static int call_mixed_rvv_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
-                                      BLASLONG n0, BLASLONG full_n,
-                                      INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
-                                      INPUT_T *A_pack, INPUT_T *B_pack)
+static int call_packed_rvv_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
+                                       BLASLONG n0, BLASLONG full_n,
+                                       INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
+                                       INPUT_T *A_pack, INPUT_T *B_pack)
 {
     BLASLONG m_top = 0;
     BLASLONG n_top = 0;
@@ -91,26 +94,19 @@ static int call_mixed_rvv_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
         n_top += columns;
     }
 
-    /* Run INT8 x INT8 with INT32 accumulation through the RVV kernel. */
+    /* Run the selected RVV micro-kernel on the two packed panels. */
+#if defined(OMP_KIND_INT8_MIXED)
     return RVV_KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
                              C + n0 * M, M);
-}
-#endif
-
-/*
- * ROADMAP BLOCK 4: Full-matrix call used outside the timed tile loop
- * ------------------------------------------------------------------
- * Warmup and serial validation need one ordinary full-matrix kernel call.
- */
-static int call_full_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
-                            INPUT_T *A, INPUT_T *B, OUTPUT_T *C)
-{
-#if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
-    return KERNEL_SYMBOL(M, N, K, (INPUT_T)1, A, B, C, M);
+#elif defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
+    return KERNEL_SYMBOL(M, N, K, (INPUT_T)1, A_pack, B_pack,
+                         C + n0 * M, M);
 #else
-    return KERNEL_SYMBOL(M, N, K, 1, A, B, C, M);
+    return KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
+                         C + n0 * M, M);
 #endif
 }
+#endif
 
 /*
  * ROADMAP BLOCK 5: Send one output strip to its selected path
@@ -124,22 +120,16 @@ static int call_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
                             int use_rvv_path)
 {
 #if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
-    /* FP32/FP64: call the selected RVV floating-point kernel directly. */
-    (void)full_n;
-    (void)A_pack;
-    (void)B_tile;
+    /* FP32/FP64: pack the canonical input and call the RVV kernel. */
     (void)use_rvv_path;
-    return KERNEL_SYMBOL(M, N, K, (INPUT_T)1,
-                         A, B + n0 * K, C + n0 * M, M);
+    return call_packed_rvv_tile_kernel(M, N, K, n0, full_n,
+                                       A, B, C, A_pack, B_tile);
 
 #elif defined(OMP_KIND_INT8_RVV)
-    /* Pure INT8 RVV mode: inputs already follow the selected kernel contract. */
-    (void)full_n;
-    (void)A_pack;
-    (void)B_tile;
+    /* Pure INT8 RVV mode uses the same canonical-to-packed path as mixed RVV. */
     (void)use_rvv_path;
-    return KERNEL_SYMBOL(M, N, K, 1,
-                         A, B + n0 * K, C + n0 * M, M);
+    return call_packed_rvv_tile_kernel(M, N, K, n0, full_n,
+                                       A, B, C, A_pack, B_tile);
 
 #elif defined(OMP_KIND_INT8_IME)
     /* Pure IME mode: first copy this worker's B columns into a compact strip. */
@@ -156,8 +146,8 @@ static int call_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
 #elif defined(OMP_KIND_INT8_MIXED)
     /* Mixed cluster 1 uses the explicit RVV packing and kernel path. */
     if (use_rvv_path) {
-        return call_mixed_rvv_tile_kernel(M, N, K, n0, full_n,
-                                          A, B, C, A_pack, B_tile);
+        return call_packed_rvv_tile_kernel(M, N, K, n0, full_n,
+                                           A, B, C, A_pack, B_tile);
     }
 
     /* Mixed cluster 0 copies a compact B strip and calls native IME. */

@@ -1,111 +1,224 @@
 /*
- * Copyright (c) 2026 University of Salerno
- *
- * Created by Babar Hussain.
- */
-
-/*
 RVV INT8 GEMM Kernel
+Tile: 8x4
 Variant: igemm_kernel_8x4_zvl256b_lmul2_unroll4
-Settings:
- input_LMUL=2 (m2)
- widening_chain=INT8 LMUL 2 -> INT16 LMUL 4 -> INT32 LMUL 8
- M=8
- N=4
- precision=int8 x int8 -> int32
- unroll_factor=4
- Kernel Name: igemm_kernel_8x4_zvl256b_lmul2_unroll4
+LMUL label: 2
+LMUL compute path: native
+Unroll: 4
+Math contract: same blocking shape/load as FP32 8x4 (M/8 x N/4 main + tails)
 */
-/*
- * Kernel dataflow summary: igemm_kernel_8x4_zvl256b_lmul2_unroll4_i8i32
- * Input A: packed INT8 A micro-panel ordered by row block and K.
- * Input B: packed INT8 B micro-panel ordered by column block and K.
- * Accumulation: INT32 RVV widening accumulators across K; boundary cleanup handles leftover tiles.
- * Output C: column-major INT32 tile updated with alpha-scaled dot products.
- */
-/*
- * Architecture overview
- * ---------------------
- * Purpose: standalone RVV INT8 x INT8 -> INT32 GEMM micro-kernel for 8x4 tiles.
- * Step 1: Read packed INT8 A/B micro-panels produced by the benchmark driver.
- * Step 2: Traverse K while RVV widening instructions build INT32 dot-product sums.
- * Step 3: Apply the selected LMUL and unroll factor shown in the file name.
- * Step 4: Update full vectorized tiles first for the fast path.
- * Step 5: Finish leftover rows or columns with the boundary cleanup path.
- */
-#include <stddef.h>
+
 #include <stdint.h>
+#include <stddef.h>
 #include <riscv_vector.h>
 
 typedef long BLASLONG;
-typedef int8_t GEMM_I8;
-typedef int32_t GEMM_I32;
+typedef int8_t IFLOAT;
+typedef int32_t OFLOAT;
 
-#define INPUT_VSETVL(n) __riscv_vsetvl_e8m2(n)
-typedef vint8m2_t input_i8_t;
-typedef vint16m4_t wide_i16_t;
-typedef vint32m8_t acc_i32_t;
-#define INPUT_VLE8(p, vl) __riscv_vle8_v_i8m2(p, vl)
-#define WIDEN_I16(v, vl) __riscv_vsext_vf2_i16m4(v, vl)
-#define ACC_ZERO(vl) __riscv_vmv_v_x_i32m8(0, vl)
-#define ACC_WMACC(acc, b, a, vl) __riscv_vwmacc_vx_i32m8(acc, b, a, vl)
-#define ACC_STORE(p, v, vl) __riscv_vse32_v_i32m8(p, v, vl)
-static inline BLASLONG packed_row_block(BLASLONG left)
+#ifndef CNAME
+#define CNAME igemm_kernel_8x4_zvl256b
+#endif
+
+static inline OFLOAT add_scaled_wrap_i32(OFLOAT dst, OFLOAT alpha, int64_t acc)
 {
-    if (left >= 8) return 8;
-    if (left >= 4) return 4;
-    if (left >= 2) return 2;
-    return 1;
+    uint32_t a = (uint32_t)dst;
+    uint32_t b = (uint32_t)((int32_t)(acc * (int64_t)alpha));
+    return (OFLOAT)(a + b);
 }
 
-static void scalar_packed_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
-                                GEMM_I32 alpha, const GEMM_I8 *Ablk,
-                                const GEMM_I8 *Bblk, GEMM_I32 *Cblk,
-                                BLASLONG ldc)
+static inline void scalar_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
+                                OFLOAT alpha, const IFLOAT *Ablk, const IFLOAT *Bblk,
+                                OFLOAT *Cblk, BLASLONG ldc)
 {
-    for (BLASLONG c = 0; c < cols; ++c) {
-        for (BLASLONG r = 0; r < rows; ++r) {
-            int64_t sum = 0;
-#pragma GCC unroll 1
-            for (BLASLONG k = 0; k < K; ++k) {
-                sum += (GEMM_I32)Ablk[k * rows + r] *
-                       (GEMM_I32)Bblk[k * cols + c];
+    int64_t acc[8] = {0};
+    BLASLONG ai = 0;
+    BLASLONG bi = 0;
+
+#pragma GCC unroll 4
+    for (BLASLONG k = 0; k < K; ++k) {
+        for (BLASLONG n = 0; n < cols; ++n) {
+            const int32_t b = (int32_t)Bblk[bi + n];
+            for (BLASLONG m = 0; m < rows; ++m) {
+                acc[n * rows + m] += (int32_t)Ablk[ai + m] * b;
             }
-            Cblk[c * ldc + r] += alpha * (GEMM_I32)sum;
+        }
+        ai += rows;
+        bi += cols;
+    }
+
+    for (BLASLONG n = 0; n < cols; ++n) {
+        OFLOAT *c_col = &Cblk[n * ldc];
+        for (BLASLONG m = 0; m < rows; ++m) {
+            c_col[m] = add_scaled_wrap_i32(c_col[m], alpha, acc[n * rows + m]);
         }
     }
 }
 
-static inline void scatter_8x4(BLASLONG n_top, BLASLONG m_top, GEMM_I32 alpha,
-                               GEMM_I32 *C, BLASLONG ldc,
-                               const GEMM_I32 out0[8], const GEMM_I32 out1[8],
-                               const GEMM_I32 out2[8], const GEMM_I32 out3[8])
+static inline void vec_block_8xN(BLASLONG cols, BLASLONG K,
+                                 OFLOAT alpha, const IFLOAT *Ablk, const IFLOAT *Bblk,
+                                 OFLOAT *Cblk, BLASLONG ldc)
 {
-    BLASLONG ci = n_top * ldc + m_top;
-    C[ci + 0 * ldc + 0] += alpha * out0[0]; C[ci + 0 * ldc + 1] += alpha * out0[1];
-    C[ci + 0 * ldc + 2] += alpha * out0[2]; C[ci + 0 * ldc + 3] += alpha * out0[3];
-    C[ci + 0 * ldc + 4] += alpha * out0[4]; C[ci + 0 * ldc + 5] += alpha * out0[5];
-    C[ci + 0 * ldc + 6] += alpha * out0[6]; C[ci + 0 * ldc + 7] += alpha * out0[7];
+    const size_t gvl = __riscv_vsetvl_e8m2(4);
+    vint8m2_t a8_0;
+    vint8m2_t a8_1;
+    vint16m4_t a16_0;
+    vint16m4_t a16_1;
+    vint32m8_t r00 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r01 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r02 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r03 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r10 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r11 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r12 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r13 = __riscv_vmv_v_x_i32m8(0, gvl);
 
-    C[ci + 1 * ldc + 0] += alpha * out1[0]; C[ci + 1 * ldc + 1] += alpha * out1[1];
-    C[ci + 1 * ldc + 2] += alpha * out1[2]; C[ci + 1 * ldc + 3] += alpha * out1[3];
-    C[ci + 1 * ldc + 4] += alpha * out1[4]; C[ci + 1 * ldc + 5] += alpha * out1[5];
-    C[ci + 1 * ldc + 6] += alpha * out1[6]; C[ci + 1 * ldc + 7] += alpha * out1[7];
+    BLASLONG ai = 0;
+    BLASLONG bi = 0;
 
-    C[ci + 2 * ldc + 0] += alpha * out2[0]; C[ci + 2 * ldc + 1] += alpha * out2[1];
-    C[ci + 2 * ldc + 2] += alpha * out2[2]; C[ci + 2 * ldc + 3] += alpha * out2[3];
-    C[ci + 2 * ldc + 4] += alpha * out2[4]; C[ci + 2 * ldc + 5] += alpha * out2[5];
-    C[ci + 2 * ldc + 6] += alpha * out2[6]; C[ci + 2 * ldc + 7] += alpha * out2[7];
+#pragma GCC unroll 4
+    for (BLASLONG k = 0; k < K; ++k) {
+        a8_0 = __riscv_vle8_v_i8m2(&Ablk[ai], gvl);
+        a8_1 = __riscv_vle8_v_i8m2(&Ablk[ai + gvl], gvl);
+        a16_0 = __riscv_vsext_vf2_i16m4(a8_0, gvl);
+        a16_1 = __riscv_vsext_vf2_i16m4(a8_1, gvl);
+        ai += 8;
 
-    C[ci + 3 * ldc + 0] += alpha * out3[0]; C[ci + 3 * ldc + 1] += alpha * out3[1];
-    C[ci + 3 * ldc + 2] += alpha * out3[2]; C[ci + 3 * ldc + 3] += alpha * out3[3];
-    C[ci + 3 * ldc + 4] += alpha * out3[4]; C[ci + 3 * ldc + 5] += alpha * out3[5];
-    C[ci + 3 * ldc + 6] += alpha * out3[6]; C[ci + 3 * ldc + 7] += alpha * out3[7];
+        if (cols > 0) {
+            const int16_t b = (int16_t)Bblk[bi + 0];
+            r00 = __riscv_vwmacc_vx_i32m8(r00, b, a16_0, gvl);
+            r10 = __riscv_vwmacc_vx_i32m8(r10, b, a16_1, gvl);
+        }
+        if (cols > 1) {
+            const int16_t b = (int16_t)Bblk[bi + 1];
+            r01 = __riscv_vwmacc_vx_i32m8(r01, b, a16_0, gvl);
+            r11 = __riscv_vwmacc_vx_i32m8(r11, b, a16_1, gvl);
+        }
+        if (cols > 2) {
+            const int16_t b = (int16_t)Bblk[bi + 2];
+            r02 = __riscv_vwmacc_vx_i32m8(r02, b, a16_0, gvl);
+            r12 = __riscv_vwmacc_vx_i32m8(r12, b, a16_1, gvl);
+        }
+        if (cols > 3) {
+            const int16_t b = (int16_t)Bblk[bi + 3];
+            r03 = __riscv_vwmacc_vx_i32m8(r03, b, a16_0, gvl);
+            r13 = __riscv_vwmacc_vx_i32m8(r13, b, a16_1, gvl);
+        }
+        bi += cols;
+    }
+
+    OFLOAT tmp0[4], tmp1[4];
+    if (cols > 0) {
+        __riscv_vse32_v_i32m8(tmp0, r00, gvl);
+        __riscv_vse32_v_i32m8(tmp1, r10, gvl);
+        OFLOAT *c_col = &Cblk[0 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m]     = add_scaled_wrap_i32(c_col[m],     alpha, tmp0[m]);
+            c_col[4 + m] = add_scaled_wrap_i32(c_col[4 + m], alpha, tmp1[m]);
+        }
+    }
+    if (cols > 1) {
+        __riscv_vse32_v_i32m8(tmp0, r01, gvl);
+        __riscv_vse32_v_i32m8(tmp1, r11, gvl);
+        OFLOAT *c_col = &Cblk[1 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m]     = add_scaled_wrap_i32(c_col[m],     alpha, tmp0[m]);
+            c_col[4 + m] = add_scaled_wrap_i32(c_col[4 + m], alpha, tmp1[m]);
+        }
+    }
+    if (cols > 2) {
+        __riscv_vse32_v_i32m8(tmp0, r02, gvl);
+        __riscv_vse32_v_i32m8(tmp1, r12, gvl);
+        OFLOAT *c_col = &Cblk[2 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m]     = add_scaled_wrap_i32(c_col[m],     alpha, tmp0[m]);
+            c_col[4 + m] = add_scaled_wrap_i32(c_col[4 + m], alpha, tmp1[m]);
+        }
+    }
+    if (cols > 3) {
+        __riscv_vse32_v_i32m8(tmp0, r03, gvl);
+        __riscv_vse32_v_i32m8(tmp1, r13, gvl);
+        OFLOAT *c_col = &Cblk[3 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m]     = add_scaled_wrap_i32(c_col[m],     alpha, tmp0[m]);
+            c_col[4 + m] = add_scaled_wrap_i32(c_col[4 + m], alpha, tmp1[m]);
+        }
+    }
 }
 
-int igemm_kernel_8x4_zvl256b_lmul2_unroll4_i8i32(
-    BLASLONG M, BLASLONG N, BLASLONG K,
-    GEMM_I32 alpha, GEMM_I8 *A, GEMM_I8 *B, GEMM_I32 *C, BLASLONG ldc)
+static inline void vec_block_4xN(BLASLONG cols, BLASLONG K,
+                                 OFLOAT alpha, const IFLOAT *Ablk, const IFLOAT *Bblk,
+                                 OFLOAT *Cblk, BLASLONG ldc)
+{
+    const size_t gvl = __riscv_vsetvl_e8m2(4);
+    vint8m2_t a8;
+    vint16m4_t a16;
+    vint32m8_t r0 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r1 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r2 = __riscv_vmv_v_x_i32m8(0, gvl);
+    vint32m8_t r3 = __riscv_vmv_v_x_i32m8(0, gvl);
+
+    BLASLONG ai = 0;
+    BLASLONG bi = 0;
+
+#pragma GCC unroll 4
+    for (BLASLONG k = 0; k < K; ++k) {
+        a8 = __riscv_vle8_v_i8m2(&Ablk[ai], gvl);
+        a16 = __riscv_vsext_vf2_i16m4(a8, gvl);
+        ai += 4;
+
+        if (cols > 0) {
+            const int16_t b = (int16_t)Bblk[bi + 0];
+            r0 = __riscv_vwmacc_vx_i32m8(r0, b, a16, gvl);
+        }
+        if (cols > 1) {
+            const int16_t b = (int16_t)Bblk[bi + 1];
+            r1 = __riscv_vwmacc_vx_i32m8(r1, b, a16, gvl);
+        }
+        if (cols > 2) {
+            const int16_t b = (int16_t)Bblk[bi + 2];
+            r2 = __riscv_vwmacc_vx_i32m8(r2, b, a16, gvl);
+        }
+        if (cols > 3) {
+            const int16_t b = (int16_t)Bblk[bi + 3];
+            r3 = __riscv_vwmacc_vx_i32m8(r3, b, a16, gvl);
+        }
+        bi += cols;
+    }
+
+    OFLOAT tmp[4];
+    if (cols > 0) {
+        __riscv_vse32_v_i32m8(tmp, r0, gvl);
+        OFLOAT *c_col = &Cblk[0 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m] = add_scaled_wrap_i32(c_col[m], alpha, tmp[m]);
+        }
+    }
+    if (cols > 1) {
+        __riscv_vse32_v_i32m8(tmp, r1, gvl);
+        OFLOAT *c_col = &Cblk[1 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m] = add_scaled_wrap_i32(c_col[m], alpha, tmp[m]);
+        }
+    }
+    if (cols > 2) {
+        __riscv_vse32_v_i32m8(tmp, r2, gvl);
+        OFLOAT *c_col = &Cblk[2 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m] = add_scaled_wrap_i32(c_col[m], alpha, tmp[m]);
+        }
+    }
+    if (cols > 3) {
+        __riscv_vse32_v_i32m8(tmp, r3, gvl);
+        OFLOAT *c_col = &Cblk[3 * ldc];
+        for (BLASLONG m = 0; m < 4; ++m) {
+            c_col[m] = add_scaled_wrap_i32(c_col[m], alpha, tmp[m]);
+        }
+    }
+}
+
+int CNAME(BLASLONG M, BLASLONG N, BLASLONG K,
+          OFLOAT alpha, IFLOAT *A, IFLOAT *B, OFLOAT *C, BLASLONG ldc)
 {
     BLASLONG m_top = 0;
     BLASLONG n_top = 0;
@@ -114,129 +227,38 @@ int igemm_kernel_8x4_zvl256b_lmul2_unroll4_i8i32(
         return 0;
     }
 
+    if (__riscv_vsetvl_e8m2(4) < 4) {
+        return -1;
+    }
+
     for (BLASLONG j = 0; j < N / 4; ++j) {
         m_top = 0;
 
         for (BLASLONG i = 0; i < M / 8; ++i) {
-            GEMM_I32 out0[8] = {0};
-            GEMM_I32 out1[8] = {0};
-            GEMM_I32 out2[8] = {0};
-            GEMM_I32 out3[8] = {0};
-
-            for (BLASLONG base = 0; base < 8; ) {
-                size_t gvl = INPUT_VSETVL((size_t)(8 - base));
-                acc_i32_t acc0 = ACC_ZERO(gvl);
-                acc_i32_t acc1 = ACC_ZERO(gvl);
-                acc_i32_t acc2 = ACC_ZERO(gvl);
-                acc_i32_t acc3 = ACC_ZERO(gvl);
-
-#pragma GCC unroll 4
-                for (BLASLONG k = 0; k < K; ++k) {
-                    BLASLONG ai = m_top * K + k * 8 + base;
-                    BLASLONG bi = n_top * K + k * 4;
-                    GEMM_I8 b0 = B[bi + 0];
-                    GEMM_I8 b1 = B[bi + 1];
-                    GEMM_I8 b2 = B[bi + 2];
-                    GEMM_I8 b3 = B[bi + 3];
-                    input_i8_t a8 = INPUT_VLE8(&A[ai], gvl);
-                    wide_i16_t a16 = WIDEN_I16(a8, gvl);
-
-                    acc0 = ACC_WMACC(acc0, (int16_t)b0, a16, gvl);
-                    acc1 = ACC_WMACC(acc1, (int16_t)b1, a16, gvl);
-                    acc2 = ACC_WMACC(acc2, (int16_t)b2, a16, gvl);
-                    acc3 = ACC_WMACC(acc3, (int16_t)b3, a16, gvl);
-                }
-
-                ACC_STORE(&out0[base], acc0, gvl);
-                ACC_STORE(&out1[base], acc1, gvl);
-                ACC_STORE(&out2[base], acc2, gvl);
-                ACC_STORE(&out3[base], acc3, gvl);
-                base += (BLASLONG)gvl;
-            }
-
-            scatter_8x4(n_top, m_top, alpha, C, ldc, out0, out1, out2, out3);
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_8xN(4, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
             m_top += 8;
         }
 
         if (M & 4) {
-            BLASLONG ai = m_top * K;
-            BLASLONG bi = n_top * K;
-            GEMM_I32 r00 = 0, r01 = 0, r02 = 0, r03 = 0;
-            GEMM_I32 r10 = 0, r11 = 0, r12 = 0, r13 = 0;
-            GEMM_I32 r20 = 0, r21 = 0, r22 = 0, r23 = 0;
-            GEMM_I32 r30 = 0, r31 = 0, r32 = 0, r33 = 0;
-
-#pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; ++k) {
-                GEMM_I8 a0 = A[ai + 0], a1 = A[ai + 1], a2 = A[ai + 2], a3 = A[ai + 3];
-                GEMM_I8 b0 = B[bi + 0], b1 = B[bi + 1], b2 = B[bi + 2], b3 = B[bi + 3];
-                ai += 4;
-                bi += 4;
-                r00 += (GEMM_I32)a0 * (GEMM_I32)b0; r01 += (GEMM_I32)a1 * (GEMM_I32)b0;
-                r02 += (GEMM_I32)a2 * (GEMM_I32)b0; r03 += (GEMM_I32)a3 * (GEMM_I32)b0;
-                r10 += (GEMM_I32)a0 * (GEMM_I32)b1; r11 += (GEMM_I32)a1 * (GEMM_I32)b1;
-                r12 += (GEMM_I32)a2 * (GEMM_I32)b1; r13 += (GEMM_I32)a3 * (GEMM_I32)b1;
-                r20 += (GEMM_I32)a0 * (GEMM_I32)b2; r21 += (GEMM_I32)a1 * (GEMM_I32)b2;
-                r22 += (GEMM_I32)a2 * (GEMM_I32)b2; r23 += (GEMM_I32)a3 * (GEMM_I32)b2;
-                r30 += (GEMM_I32)a0 * (GEMM_I32)b3; r31 += (GEMM_I32)a1 * (GEMM_I32)b3;
-                r32 += (GEMM_I32)a2 * (GEMM_I32)b3; r33 += (GEMM_I32)a3 * (GEMM_I32)b3;
-            }
-            BLASLONG ci = n_top * ldc + m_top;
-            C[ci + 0 * ldc + 0] += alpha * r00; C[ci + 0 * ldc + 1] += alpha * r01;
-            C[ci + 0 * ldc + 2] += alpha * r02; C[ci + 0 * ldc + 3] += alpha * r03;
-            C[ci + 1 * ldc + 0] += alpha * r10; C[ci + 1 * ldc + 1] += alpha * r11;
-            C[ci + 1 * ldc + 2] += alpha * r12; C[ci + 1 * ldc + 3] += alpha * r13;
-            C[ci + 2 * ldc + 0] += alpha * r20; C[ci + 2 * ldc + 1] += alpha * r21;
-            C[ci + 2 * ldc + 2] += alpha * r22; C[ci + 2 * ldc + 3] += alpha * r23;
-            C[ci + 3 * ldc + 0] += alpha * r30; C[ci + 3 * ldc + 1] += alpha * r31;
-            C[ci + 3 * ldc + 2] += alpha * r32; C[ci + 3 * ldc + 3] += alpha * r33;
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_4xN(4, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
             m_top += 4;
         }
 
         if (M & 2) {
-            BLASLONG ai = m_top * K;
-            BLASLONG bi = n_top * K;
-            GEMM_I32 r00 = 0, r01 = 0, r10 = 0, r11 = 0, r20 = 0, r21 = 0, r30 = 0, r31 = 0;
-
-#pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; ++k) {
-                GEMM_I8 a0 = A[ai + 0], a1 = A[ai + 1];
-                GEMM_I8 b0 = B[bi + 0], b1 = B[bi + 1], b2 = B[bi + 2], b3 = B[bi + 3];
-                ai += 2;
-                bi += 4;
-                r00 += (GEMM_I32)a0 * (GEMM_I32)b0; r01 += (GEMM_I32)a1 * (GEMM_I32)b0;
-                r10 += (GEMM_I32)a0 * (GEMM_I32)b1; r11 += (GEMM_I32)a1 * (GEMM_I32)b1;
-                r20 += (GEMM_I32)a0 * (GEMM_I32)b2; r21 += (GEMM_I32)a1 * (GEMM_I32)b2;
-                r30 += (GEMM_I32)a0 * (GEMM_I32)b3; r31 += (GEMM_I32)a1 * (GEMM_I32)b3;
-            }
-            BLASLONG ci = n_top * ldc + m_top;
-            C[ci + 0 * ldc + 0] += alpha * r00; C[ci + 0 * ldc + 1] += alpha * r01;
-            C[ci + 1 * ldc + 0] += alpha * r10; C[ci + 1 * ldc + 1] += alpha * r11;
-            C[ci + 2 * ldc + 0] += alpha * r20; C[ci + 2 * ldc + 1] += alpha * r21;
-            C[ci + 3 * ldc + 0] += alpha * r30; C[ci + 3 * ldc + 1] += alpha * r31;
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(2, 4, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
             m_top += 2;
         }
 
         if (M & 1) {
-            BLASLONG ai = m_top * K;
-            BLASLONG bi = n_top * K;
-            GEMM_I32 r00 = 0, r10 = 0, r20 = 0, r30 = 0;
-#pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; ++k) {
-                GEMM_I8 a0 = A[ai];
-                GEMM_I8 b0 = B[bi + 0], b1 = B[bi + 1], b2 = B[bi + 2], b3 = B[bi + 3];
-                ai += 1;
-                bi += 4;
-                r00 += (GEMM_I32)a0 * (GEMM_I32)b0;
-                r10 += (GEMM_I32)a0 * (GEMM_I32)b1;
-                r20 += (GEMM_I32)a0 * (GEMM_I32)b2;
-                r30 += (GEMM_I32)a0 * (GEMM_I32)b3;
-            }
-            BLASLONG ci = n_top * ldc + m_top;
-            C[ci + 0 * ldc] += alpha * r00;
-            C[ci + 1 * ldc] += alpha * r10;
-            C[ci + 2 * ldc] += alpha * r20;
-            C[ci + 3 * ldc] += alpha * r30;
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(1, 4, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
             m_top += 1;
         }
 
@@ -245,29 +267,71 @@ int igemm_kernel_8x4_zvl256b_lmul2_unroll4_i8i32(
 
     if (N & 2) {
         m_top = 0;
-        while (m_top < M) {
-            BLASLONG rows = packed_row_block(M - m_top);
-            scalar_packed_block(rows, 2, K, alpha,
-                                &A[m_top * K],
-                                &B[n_top * K],
-                                &C[n_top * ldc + m_top],
-                                ldc);
-            m_top += rows;
+
+        for (BLASLONG i = 0; i < M / 8; ++i) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_8xN(2, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 8;
         }
+
+        if (M & 4) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_4xN(2, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 4;
+        }
+
+        if (M & 2) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(2, 2, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
+        }
+
+        if (M & 1) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(1, 2, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
+        }
+
         n_top += 2;
     }
 
     if (N & 1) {
         m_top = 0;
-        while (m_top < M) {
-            BLASLONG rows = packed_row_block(M - m_top);
-            scalar_packed_block(rows, 1, K, alpha,
-                                &A[m_top * K],
-                                &B[n_top * K],
-                                &C[n_top * ldc + m_top],
-                                ldc);
-            m_top += rows;
+
+        for (BLASLONG i = 0; i < M / 8; ++i) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_8xN(1, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 8;
         }
+
+        if (M & 4) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            vec_block_4xN(1, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 4;
+        }
+
+        if (M & 2) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(2, 1, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
+        }
+
+        if (M & 1) {
+            const BLASLONG ai = m_top * K;
+            const BLASLONG bi = n_top * K;
+            scalar_block(1, 1, K, alpha, &A[ai], &B[bi], &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
+        }
+
+        n_top += 1;
     }
+
     return 0;
 }

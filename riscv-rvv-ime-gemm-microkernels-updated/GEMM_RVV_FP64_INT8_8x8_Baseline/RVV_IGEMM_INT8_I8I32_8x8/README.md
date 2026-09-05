@@ -1,46 +1,23 @@
-# RVV IGEMM INT8 Microkernels: 8x8 Tiles
+# RVV INT8 IGEMM Microkernels: 8x8
 
-## Purpose
-
-INT8 IGEMM microkernel family for benchmarking INT8 x INT8 -> INT32 with the 8x8 tile shape on RISC-V targets.
-
-## Variant Matrix
+This family contains 16 INT8 x INT8 -> INT32 RVV kernels for a VLEN=256 target.
 
 | Property | Value |
 |---|---|
-| Backend | RVV |
-| Tile shape | 8x8 |
-| Variant count | 56 |
-| ZVL target | 256b |
-| LMUL labels | lmulmf8, lmulmf4, lmulmf2, lmul1, lmul2, lmul4, lmul8 |
-| Unroll factors | unroll1, unroll2, unroll4, unroll8 |
-| Benchmark driver | `igemm_bench.c` |
-| Reported metric | GOPS |
+| Software tile | 8x8 output values |
+| Source LMUL variants | 1/4, 1/2, 1, 2 |
+| K-loop unroll factors | 1, 2, 4, 8 |
+| Metric | GOPS |
+| Validation | Independent INT64 dot products, converted to the defined INT32 result |
 
-## Per-Variant Layout
+The widening path follows `INT8(LMUL) -> INT16(2 x LMUL) -> INT32(4 x LMUL)`. LMUL=1/4 is the smallest source group that holds eight INT8 rows at VLEN=256. LMUL=2 is the largest source group whose INT32 destination remains legal at LMUL=8. This is why LMUL=1/8, 4, and 8 are intentionally absent.
 
-```text
-<kernel_variant>/
-+-- <kernel_variant>.c
-+-- igemm_bench.c
-+-- Makefile
-```
-
-Build and run one variant:
+Build and validate one variant:
 
 ```bash
-cd <kernel_variant>
+cd igemm_kernel_8x8_zvl256b_lmulmf4_unroll1
 make clean && make
-./bench 1024 1024 1024
+GEMM_VALIDATE=1 ./bench 15 15 13
 ```
 
-## Dataflow Summary
-
-- Input panels are read using the layout expected by the benchmark driver.
-- The main tile path uses the selected backend and the LMUL/unroll setting encoded in the folder name.
-- Boundary cleanup handles rows or columns not covered by full micro-tiles.
-- The output matrix is updated in column-major layout.
-
-## Notes
-
-This family is the largest standalone RVV INT8 set and uses the ZVL256 target.
+The kernel accumulates into INT32 vectors and updates C with explicit modulo-2^32 arithmetic. The `15x15x13` validation exercises the full tile plus every row and column cleanup path.

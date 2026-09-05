@@ -154,8 +154,17 @@ run_one()
     local diff_csv="$4"
     local input_csv="$5"
     local run_log="$6"
+    local execution_path="$7"
+    local path_env=()
 
-    taskset -c "${core}" "${exe}" "${INPUT_CLASS}" "${M}" "${N}" "${K}" \
+    case "${execution_path}" in
+        IME_NATIVE) path_env=("SPACEMIT_IME_FORCE_NATIVE=1") ;;
+        RVV_FALLBACK) path_env=("SPACEMIT_IME_FORCE_RVV=1") ;;
+        *) return 1 ;;
+    esac
+
+    taskset -c "${core}" env "${path_env[@]}" \
+        "${exe}" "${INPUT_CLASS}" "${M}" "${N}" "${K}" \
         "${seed}" "${diff_csv}" "${input_csv}" > "${run_log}" 2>&1
 }
 
@@ -255,7 +264,7 @@ while IFS= read -r kernel_dir; do
                 input_csv="${HIST_DIR}/${safe_kernel}_ime_native_core${core}_run${run}_input.csv"
                 run_log="${LOG_DIR}/${safe_kernel}_ime_native_core${core}_run${run}.log"
 
-                if run_one "${ime_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}"; then
+                if run_one "${ime_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}" "IME_NATIVE"; then
                     status="$(awk -F, 'NR==2 {print $1}' "${run_log}")"
                     return_code="$(awk -F, 'NR==2 {print $2}' "${run_log}")"
                     total_elements="$(awk -F, 'NR==2 {print $3}' "${run_log}")"
@@ -293,7 +302,7 @@ while IFS= read -r kernel_dir; do
                 input_csv="${HIST_DIR}/${safe_kernel}_rvv_fallback_core${core}_run${run}_input.csv"
                 run_log="${LOG_DIR}/${safe_kernel}_rvv_fallback_core${core}_run${run}.log"
 
-                if run_one "${rvv_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}"; then
+                if run_one "${rvv_exe}" "${core}" "${seed}" "${diff_csv}" "${input_csv}" "${run_log}" "RVV_FALLBACK"; then
                     status="$(awk -F, 'NR==2 {print $1}' "${run_log}")"
                     return_code="$(awk -F, 'NR==2 {print $2}' "${run_log}")"
                     total_elements="$(awk -F, 'NR==2 {print $3}' "${run_log}")"

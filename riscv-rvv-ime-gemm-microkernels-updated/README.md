@@ -35,9 +35,12 @@ riscv-rvv-ime-gemm-microkernels/
 ```
 
 The four baseline folders contain standalone FP32, FP64, and INT8 RVV kernel
-families for 8x4 and 8x8 output tiles. `IME_NATIVE_KERNELS` contains native
-IME wrappers and their matching RVV widening kernels. Every kernel directory
-contains its source, benchmark driver, and Makefile.
+families for 8x4 and 8x8 output tiles. The combined campaign uses the INT8
+copies under `GEMM_RVV_FP32_INT8_*` as the canonical INT8 source and does not
+repeat the identical copies stored with the FP64 families. `IME_NATIVE_KERNELS`
+contains native IME wrappers and their matching RVV widening kernels. Its
+kernel directories use a small local benchmark wrapper backed by the shared
+`IME_NATIVE_KERNELS/ime_bench_common.h` validation driver.
 
 ## Single-Core Characterization
 
@@ -47,7 +50,17 @@ K1 benchmarks RVV on cores 0-7 and native IME on cores 0-3:
 bash run_k1_single_core_0_7_1024.sh
 ```
 
-The wrapper calls the corrected full launcher:
+This is the recommended command. It runs FP32 first, followed by FP64, one
+canonical INT8 RVV set, and native IME. Each kernel must pass a small
+`15x15x69` correctness test before its `1024x1024x1024` timed runs begin.
+The non-multiple validation shape also checks row, column, and K cleanup paths.
+
+The launcher selects each path explicitly. Native IME runs are pinned to
+IME-capable cores, while RVV runs call the RVV path directly. Native kernels
+check the current CPU but do not move threads between cores.
+
+The wrapper calls the full launcher below. Do not run both commands for one
+campaign, because that would repeat the same complete benchmark:
 
 ```bash
 bash run_k1_01_rvv_ime_0_7_1024.sh
@@ -83,9 +96,10 @@ MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
 
-The benchmark uses cluster-aware placement: workers are pinned to their target
-cores and own separate output regions. The available system memory-node list is
-recorded in every OpenMP campaign log.
+The benchmark uses cluster-aware placement: workers are pinned once before the
+tile loop and own separate output regions. Native kernel calls do not change
+worker affinity. The available system memory-node list is recorded in every
+OpenMP campaign log.
 
 ## Accuracy Validation
 
@@ -100,6 +114,14 @@ bash run_int8_ime_vs_rvv_accuracy.sh k1 1
 For every output element, the checker reports exact-match status, signed and
 absolute error, mismatch count, maximum error, overflow status, and error
 histograms. See `RVV_IME_GEMM_ACCURACY_VALIDATION/README.md` for details.
+
+## K1 Paper Experiments
+
+Separate strong-scaling, weak-scaling, partitioning, and kernel-tuning scripts
+are provided under `HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/`. They save
+combined measured data under `results/paper_experiments/`; the matching
+analysis program creates PNG and PDF figures without synthetic data. See the
+OpenMP module README for the exact commands and experiment definitions.
 
 ## Requirements
 

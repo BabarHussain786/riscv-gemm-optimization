@@ -36,6 +36,28 @@ Settings:
 
 typedef long BLASLONG;
 typedef double FLOAT;
+/* Compute a packed remainder block when fewer than eight rows remain. */
+static inline void scalar_block(BLASLONG rows, BLASLONG cols, BLASLONG K,
+                                FLOAT alpha, const FLOAT *Ablk, const FLOAT *Bblk,
+                                FLOAT *Cblk, BLASLONG ldc)
+{
+    FLOAT acc[16] = {0.0};
+
+    for (BLASLONG k = 0; k < K; ++k) {
+        for (BLASLONG n = 0; n < cols; ++n) {
+            const FLOAT b = Bblk[k * cols + n];
+            for (BLASLONG m = 0; m < rows; ++m) {
+                acc[n * rows + m] += Ablk[k * rows + m] * b;
+            }
+        }
+    }
+
+    for (BLASLONG n = 0; n < cols; ++n) {
+        for (BLASLONG m = 0; m < rows; ++m) {
+            Cblk[n * ldc + m] += alpha * acc[n * rows + m];
+        }
+    }
+}
 
 int dgemm_kernel_8x8_zvl256b_lmul2_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, FLOAT alpha, FLOAT* A, FLOAT* B, FLOAT* C, BLASLONG ldc)
 {
@@ -221,104 +243,16 @@ int dgemm_kernel_8x8_zvl256b_lmul2_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             m_top += 4;
         }
 
-        if( M & 2 ) {
-            double result0 = 0;
-            double result1 = 0;
-            double result2 = 0;
-            double result3 = 0;
-            double result4 = 0;
-            double result5 = 0;
-            double result6 = 0;
-            double result7 = 0;
-            double result8 = 0;
-            double result9 = 0;
-            double result10 = 0;
-            double result11 = 0;
-            double result12 = 0;
-            double result13 = 0;
-            double result14 = 0;
-            double result15 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+1]*B[bi+0];
-                result2+=A[ai+0]*B[bi+1];
-                result3+=A[ai+1]*B[bi+1];
-                result4+=A[ai+0]*B[bi+2];
-                result5+=A[ai+1]*B[bi+2];
-                result6+=A[ai+0]*B[bi+3];
-                result7+=A[ai+1]*B[bi+3];
-                result8+=A[ai+0]*B[bi+4];
-                result9+=A[ai+1]*B[bi+4];
-                result10+=A[ai+0]*B[bi+5];
-                result11+=A[ai+1]*B[bi+5];
-                result12+=A[ai+0]*B[bi+6];
-                result13+=A[ai+1]*B[bi+6];
-                result14+=A[ai+0]*B[bi+7];
-                result15+=A[ai+1]*B[bi+7];
-                ai+=2;
-                bi+=8;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+0*ldc+1] += alpha * result1;
-            C[ci+1*ldc+0] += alpha * result2;
-            C[ci+1*ldc+1] += alpha * result3;
-            C[ci+2*ldc+0] += alpha * result4;
-            C[ci+2*ldc+1] += alpha * result5;
-            C[ci+3*ldc+0] += alpha * result6;
-            C[ci+3*ldc+1] += alpha * result7;
-            C[ci+4*ldc+0] += alpha * result8;
-            C[ci+4*ldc+1] += alpha * result9;
-            C[ci+5*ldc+0] += alpha * result10;
-            C[ci+5*ldc+1] += alpha * result11;
-            C[ci+6*ldc+0] += alpha * result12;
-            C[ci+6*ldc+1] += alpha * result13;
-            C[ci+7*ldc+0] += alpha * result14;
-            C[ci+7*ldc+1] += alpha * result15;
-            m_top+=2;
+                if (M & 2) {
+            scalar_block(2, 8, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
         }
 
-        if( M & 1 ) {
-            double result0 = 0;
-            double result1 = 0;
-            double result2 = 0;
-            double result3 = 0;
-            double result4 = 0;
-            double result5 = 0;
-            double result6 = 0;
-            double result7 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+0]*B[bi+1];
-                result2+=A[ai+0]*B[bi+2];
-                result3+=A[ai+0]*B[bi+3];
-                result4+=A[ai+0]*B[bi+4];
-                result5+=A[ai+0]*B[bi+5];
-                result6+=A[ai+0]*B[bi+6];
-                result7+=A[ai+0]*B[bi+7];
-                ai+=1;
-                bi+=8;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+1*ldc+0] += alpha * result1;
-            C[ci+2*ldc+0] += alpha * result2;
-            C[ci+3*ldc+0] += alpha * result3;
-            C[ci+4*ldc+0] += alpha * result4;
-            C[ci+5*ldc+0] += alpha * result5;
-            C[ci+6*ldc+0] += alpha * result6;
-            C[ci+7*ldc+0] += alpha * result7;
-            m_top+=1;
+                if (M & 1) {
+            scalar_block(1, 8, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
         }
 
         n_top += 8;
@@ -441,56 +375,16 @@ int dgemm_kernel_8x8_zvl256b_lmul2_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             m_top += 4;
         }
 
-        if( M & 2 ) {
-            double result0 = 0;
-            double result1 = 0;
-            double result2 = 0;
-            double result3 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+1]*B[bi+0];
-                result2+=A[ai+0]*B[bi+1];
-                result3+=A[ai+1]*B[bi+1];
-                ai+=2;
-                bi+=4;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+0*ldc+1] += alpha * result1;
-            C[ci+1*ldc+0] += alpha * result2;
-            C[ci+1*ldc+1] += alpha * result3;
-            m_top+=2;
+                if (M & 2) {
+            scalar_block(2, 4, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
         }
 
-        if( M & 1 ) {
-            double result0 = 0;
-            double result1 = 0;
-            double result2 = 0;
-            double result3 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+0]*B[bi+1];
-                result2+=A[ai+0]*B[bi+2];
-                result3+=A[ai+0]*B[bi+3];
-                ai+=1;
-                bi+=4;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+1*ldc+0] += alpha * result1;
-            C[ci+2*ldc+0] += alpha * result2;
-            C[ci+3*ldc+0] += alpha * result3;
-            m_top+=1;
+                if (M & 1) {
+            scalar_block(1, 4, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
         }
 
         n_top += 4;
@@ -585,44 +479,16 @@ int dgemm_kernel_8x8_zvl256b_lmul2_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             m_top += 4;
         }
 
-        if( M & 2 ) {
-            double result0 = 0;
-            double result1 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+1]*B[bi+0];
-                ai+=2;
-                bi+=2;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+0*ldc+1] += alpha * result1;
-            m_top+=2;
+                if (M & 2) {
+            scalar_block(2, 2, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
         }
 
-        if( M & 1 ) {
-            double result0 = 0;
-            double result1 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                result1+=A[ai+0]*B[bi+1];
-                ai+=1;
-                bi+=2;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            C[ci+1*ldc+0] += alpha * result1;
-            m_top+=1;
+                if (M & 1) {
+            scalar_block(1, 2, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
         }
 
         n_top += 2;
@@ -702,38 +568,16 @@ int dgemm_kernel_8x8_zvl256b_lmul2_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             m_top += 4;
         }
 
-        if( M & 2 ) {
-            double result0 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                ai+=2;
-                bi+=1;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            m_top+=2;
+                if (M & 2) {
+            scalar_block(2, 1, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 2;
         }
 
-        if( M & 1 ) {
-            double result0 = 0;
-            BLASLONG ai=m_top*K;
-            BLASLONG bi=n_top*K;
-
-            #pragma GCC unroll 2
-            for(BLASLONG k=0; k<K; k++) {
-                result0+=A[ai+0]*B[bi+0];
-                ai+=1;
-                bi+=1;
-            }
-
-            BLASLONG ci=n_top*ldc+m_top;
-            C[ci+0*ldc+0] += alpha * result0;
-            m_top+=1;
+                if (M & 1) {
+            scalar_block(1, 1, K, alpha, &A[m_top * K], &B[n_top * K],
+                         &C[n_top * ldc + m_top], ldc);
+            m_top += 1;
         }
 
         n_top += 1;

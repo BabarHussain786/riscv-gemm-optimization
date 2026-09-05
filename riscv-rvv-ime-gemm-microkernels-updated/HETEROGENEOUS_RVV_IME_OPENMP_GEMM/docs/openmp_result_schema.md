@@ -1,67 +1,62 @@
-# OpenMP Tiled GEMM Output Schema
+# OpenMP GEMM Result Schema
 
-The benchmark writes both raw per-run data and summary statistics. All generated files are placed under `results/`.
+All generated files are stored under `results/`.
 
-## Raw CSV
-
-Per-mode raw files use this pattern:
-
-```text
-results/openmp_results_<mode>_<M>_<timestamp>/openmp_raw_<mode>_<M>_runs<runs>_<timestamp>.csv
-results/openmp_raw_latest_<mode>.csv
-```
-
-The K1 campaign also creates:
+## Main Analysis Files
 
 ```text
 results/k1_openmp_heterogeneous_raw_latest.csv
-```
-
-Important raw columns:
-
-| Column | Meaning |
-|---|---|
-| `mode` | Execution mode, such as `k1-rvv-only` or `k1-mixed-rvv-ime` |
-| `baseline` | Kernel baseline folder used as source context |
-| `family` | Kernel family folder, such as FP64 RVV, INT8 RVV, or IME wrapper family |
-| `kernel` | Exact micro-kernel variant name |
-| `tile_shape` | Micro-kernel tile shape, for example `8x4` or `8x8` |
-| `zvl` | Vector-length profile encoded in the kernel name |
-| `lmul` | LMUL value encoded in the kernel name |
-| `unroll` | Unroll factor encoded in the kernel name |
-| `kind` | Datatype/execution path: `FP32_RVV`, `FP64_RVV`, `INT8_RVV`, `INT8_IME`, or `INT8_MIXED` |
-| `core_group` | CPU set used by the mode |
-| `requested_threads` | OpenMP thread count requested by the script |
-| `actual_threads` | OpenMP team size observed at runtime |
-| `M,N,K` | Matrix dimensions |
-| `tile_N` | OpenMP column-tile width |
-| `run` | Repetition number |
-| `status` | `OK`, `BUILD_FAILED`, `RUN_FAILED`, `KERNEL_RETURN`, `NUMERICAL_FAILED`, or `THREAD_COUNT_MISMATCH` |
-| `time_sec` | Timed OpenMP tiled region duration in seconds |
-| `metric_name` | `GFLOPS` for FP32/FP64, `GOPS` for INT8/IME |
-| `metric_value` | Throughput value for the timed run |
-| `validation_method` | Same-kernel validation method used for this run |
-| `mismatch_count` | Number of output mismatches against the serial same-kernel check |
-| `max_error` | Maximum output error observed during validation |
-| `worker_placement` | Per-worker CPU/path/tile information |
-| `static_tile_split` | Fixed mixed ownership, for example `IME:26;RVV:6`; `NA` for homogeneous modes |
-| `log_file` | Raw log for the compiled executable or timed run |
-
-## Summary CSV
-
-Per-mode summary files use this pattern:
-
-```text
-results/openmp_summary_latest_<mode>.csv
-```
-
-The combined K1 summary is:
-
-```text
 results/k1_openmp_heterogeneous_summary_latest.csv
 ```
 
-Summary rows are grouped by mode, kernel identity, datatype path, core group, requested thread count, `M`, `N`, `K`, `tile_N`, metric, and `static_tile_split`. The summary reports:
+Mixed policy-specific files use:
+
+```text
+results/openmp_raw_latest_k1-mixed-rvv-ime-static.csv
+results/openmp_raw_latest_k1-mixed-rvv-ime-dynamic.csv
+```
+
+## Raw CSV
+
+One row describes one kernel repetition.
+
+| Column | Meaning |
+|---|---|
+| `mode` | Execution mode |
+| `baseline`, `family`, `kernel` | Exact source and micro-kernel identity |
+| `tile_shape` | Micro-kernel shape, such as `8x4` or `8x8` |
+| `zvl`, `lmul`, `unroll` | Vector configuration encoded by the kernel |
+| `kind` | `FP32_RVV`, `FP64_RVV`, `INT8_RVV`, `INT8_IME`, or `INT8_MIXED` |
+| `core_group` | CPU set used by the mode |
+| `requested_threads`, `actual_threads` | Requested and observed OpenMP workers |
+| `M`, `N`, `K` | Matrix dimensions |
+| `tile_N` | Width of one OpenMP output-column strip |
+| `run`, `status` | Repetition number and final state |
+| `time_sec` | Timed OpenMP tile-region duration |
+| `metric_name`, `metric_value` | `GFLOPS` or `GOPS` and its value |
+| `validation_method` | Independent output reference used for this row |
+| `mismatch_count`, `max_error` | Numerical validation results |
+| `worker_placement` | Worker ID, real CPU, path, and completed output strips |
+| `static_tile_split` | Planned fixed IME/RVV split; `NA` outside mixed static mode |
+| `schedule_policy` | `static` or `dynamic` |
+| `schedule_chunk` | Dynamic chunk size; `0` for static mode |
+| `output_strip_distribution` | Observed completed output strips, for example `IME:26;RVV:6` |
+| `paired_rvv_kernel` | Canonical RVV kernel paired with the IME kernel in mixed mode; `NA` otherwise |
+| `log_file` | Full build or run log |
+| `perf_cycles`, `perf_instructions` | Optional Linux `perf` counts for the benchmark process |
+| `perf_ipc` | Instructions divided by cycles |
+| `perf_cache_references`, `perf_cache_misses` | Optional cache-event counts |
+| `perf_cache_miss_rate` | `100 * cache_misses / cache_references` |
+| `perf_log_file` | Raw `perf stat` CSV; `NA` when counters are disabled |
+
+Focused paper-experiment CSV files add four leading columns:
+`experiment`, `series`, `parameter_name`, and `parameter_value`. These identify
+the scaling curve or tuning value while preserving every original runner
+column.
+
+## Summary CSV
+
+Rows are grouped by kernel configuration, matrix size, scheduling policy, and chunk size. The observed output-strip distribution remains in the raw CSV because it can vary between dynamic repetitions. Statistics are:
 
 ```text
 ok_runs
@@ -77,19 +72,28 @@ failed_runs
 build_failed_runs
 ```
 
-For plotting, use `mean_metric` with `sample_std_metric` as the primary throughput summary. Use `median_metric` when the run distribution is skewed or when a robust central value is preferred.
+Use `mean_metric` with `sample_std_metric` for the main performance figure. Use `median_metric` when reporting a robust central value.
 
 ## Live Log
 
-The live log is intended for terminal monitoring and reviewer readability. It is not the primary analysis file. Use the raw and summary CSV files for figures and tables.
-
-Example live output:
+Static example:
 
 ```text
-KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
-  MODE: K1 heterogeneous OpenMP RVV-IME execution
-  PATH: INT8 heterogeneous native-IME/RVV GEMM (INT8 x INT8 -> INT32)
-  STATIC_TILE_SPLIT=IME:26;RVV:6
-    run 1: OK GOPS=... time=... threads=8 validation=1
-      workers: 0:cpu0:IME:tiles7;...;4:cpu4:RVV:tiles2
+SCHEDULING_POLICY=static
+SCHEDULE_CHUNK=0
+STATIC_TILE_SPLIT=IME:26;RVV:6
+TILE_COUNT_UNIT=output_column_strips
+TILE_DISTRIBUTION=IME:26;RVV:6
 ```
+
+Dynamic example:
+
+```text
+SCHEDULING_POLICY=dynamic
+SCHEDULE_CHUNK=1
+DYNAMIC_TILE_RESULT=IME:...;RVV:...
+TILE_COUNT_UNIT=output_column_strips
+TILE_DISTRIBUTION=IME:...;RVV:...
+```
+
+The live log is for monitoring. Use the CSV files for plots and tables.

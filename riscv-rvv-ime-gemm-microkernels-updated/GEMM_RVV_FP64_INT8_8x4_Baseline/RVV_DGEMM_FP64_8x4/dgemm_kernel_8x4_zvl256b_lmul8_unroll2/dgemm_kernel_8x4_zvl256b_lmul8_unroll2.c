@@ -72,8 +72,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             vfloat64m8_t result1 = __riscv_vfmul_vf_f64m8(A0, B1, gvl);
             vfloat64m8_t result2 = __riscv_vfmul_vf_f64m8(A0, B2, gvl);
             vfloat64m8_t result3 = __riscv_vfmul_vf_f64m8(A0, B3, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -137,8 +135,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             vfloat64m8_t result1 = __riscv_vfmul_vf_f64m8(A0, B1, gvl);
             vfloat64m8_t result2 = __riscv_vfmul_vf_f64m8(A0, B2, gvl);
             vfloat64m8_t result3 = __riscv_vfmul_vf_f64m8(A0, B3, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -193,8 +189,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result7 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];
@@ -228,8 +222,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result3 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];
@@ -268,8 +260,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
 
             vfloat64m8_t result0 = __riscv_vfmul_vf_f64m8(A0, B0, gvl);
             vfloat64m8_t result1 = __riscv_vfmul_vf_f64m8(A0, B1, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -313,8 +303,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
 
             vfloat64m8_t result0 = __riscv_vfmul_vf_f64m8(A0, B0, gvl);
             vfloat64m8_t result1 = __riscv_vfmul_vf_f64m8(A0, B1, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -351,8 +339,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result3 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];
@@ -376,8 +362,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result1 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];
@@ -410,8 +394,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             ai += 8;
 
             vfloat64m8_t result0 = __riscv_vfmul_vf_f64m8(A0, B0, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -446,8 +428,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             ai += 4;
 
             vfloat64m8_t result0 = __riscv_vfmul_vf_f64m8(A0, B0, gvl);
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 1; k < K; k++) {
                 B0 = B[bi + 0];
@@ -475,8 +455,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result1 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];
@@ -495,8 +473,6 @@ int dgemm_kernel_8x4_zvl256b_lmul8_unroll2(BLASLONG M, BLASLONG N, BLASLONG K, F
             double result0 = 0;
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
-
-            #pragma unroll 2
             #pragma GCC unroll 2
             for (BLASLONG k = 0; k < K; k++) {
                 result0 += A[ai + 0] * B[bi + 0];

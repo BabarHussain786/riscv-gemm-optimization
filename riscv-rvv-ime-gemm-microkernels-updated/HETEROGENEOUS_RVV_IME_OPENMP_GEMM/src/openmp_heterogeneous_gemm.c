@@ -6,14 +6,15 @@
  * Step 1 -> Read matrix sizes M, N, K and output-strip width tile_N.
  * Step 2 -> Create and fill input matrices A and B and output matrix C.
  * Step 3 -> Prepare private work buffers for the OpenMP workers.
- * Step 4 -> Start the timed OpenMP computation.
- * Step 5 -> Compare the parallel answer with a serial answer.
+ * Step 4 -> Select static or dynamic scheduling for the timed computation.
+ * Step 5 -> Compare the parallel answer with an independent GEMM answer.
  * Step 6 -> Calculate GFLOPS/GOPS and print results for the scripts.
  * Step 7 -> Release all allocated memory.
  *
- * The detailed jobs are separated into four readable source files:
+ * The detailed jobs are separated into five readable source files:
  *   openmp_heterogeneous_gemm.c -> setup, timing, and printed results
  *   openmp_cluster_execution.h  -> OpenMP teams and static tile ownership
+ *   openmp_dynamic_execution.h  -> dynamic OpenMP tile assignment
  *   openmp_kernel_dispatch.h    -> IME or RVV kernel selection
  *   openmp_validation.h         -> output comparison
  */
@@ -24,6 +25,7 @@
 #include <math.h>
 #include <omp.h>
 #include <sched.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +53,7 @@ typedef long BLASLONG;
 typedef float INPUT_T;
 typedef float OUTPUT_T;
 #define METRIC_NAME "GFLOPS"
-#define VALIDATION_NAME "SERIAL_SAME_KERNEL_FP_TOLERANCE"
+#define VALIDATION_NAME "INDEPENDENT_GEMM_FP_TOLERANCE"
 int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
                   INPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
                   BLASLONG ldc);
@@ -60,7 +62,7 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 typedef double INPUT_T;
 typedef double OUTPUT_T;
 #define METRIC_NAME "GFLOPS"
-#define VALIDATION_NAME "SERIAL_SAME_KERNEL_FP_TOLERANCE"
+#define VALIDATION_NAME "INDEPENDENT_GEMM_FP_TOLERANCE"
 int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
                   INPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
                   BLASLONG ldc);
@@ -69,7 +71,7 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 typedef int8_t INPUT_T;
 typedef int32_t OUTPUT_T;
 #define METRIC_NAME "GOPS"
-#define VALIDATION_NAME "SERIAL_SAME_KERNEL_EXACT_INT32"
+#define VALIDATION_NAME "INDEPENDENT_INT64_REFERENCE_EXACT_INT32"
 int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
                   OUTPUT_T alpha, INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
                   BLASLONG ldc);
@@ -78,7 +80,7 @@ int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
 typedef int8_t INPUT_T;
 typedef int32_t OUTPUT_T;
 #define METRIC_NAME "GOPS"
-#define VALIDATION_NAME "SERIAL_SAME_KERNEL_EXACT_INT32"
+#define VALIDATION_NAME "INDEPENDENT_INT64_REFERENCE_EXACT_INT32"
 int KERNEL_SYMBOL(BLASLONG M, BLASLONG N, BLASLONG K,
                   OUTPUT_T alpha, const INPUT_T *A, const INPUT_T *B,
                   OUTPUT_T *C, BLASLONG ldc);
@@ -126,52 +128,131 @@ static BLASLONG min_blaslong(BLASLONG a, BLASLONG b)
     return (a < b) ? a : b;
 }
 
-/* Read yes/no runtime flags such as OMP_VALIDATE and OMP_WARMUP. */
+/* Read yes/no runtime flags such as GEMM_VALIDATE and GEMM_WARMUP. */
 static int env_enabled(const char *name, int default_value)
 {
     const char *value = getenv(name);
     return (value == NULL) ? default_value : atoi(value) != 0;
 }
 
+/* Fixed independent seeds make validation reproducible without repeating the
+ * same short memory pattern in A, B, and C. */
+#define INPUT_SEED_A UINT32_C(0x12345678)
+#define INPUT_SEED_B UINT32_C(0x9e3779b9)
+#define INPUT_SEED_C UINT32_C(0x243f6a88)
+
+static uint32_t next_test_value(uint32_t *state)
+{
+    uint32_t x = *state;
+
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
+}
+
+#if defined(OMP_KIND_INT8_MIXED)
+/* Read a positive integer such as GEMM_DYNAMIC_CHUNK without silent fallback. */
+static int read_positive_env(const char *name, BLASLONG default_value,
+                             BLASLONG *result)
+{
+    const char *text = getenv(name);
+    char *end = NULL;
+    long value;
+
+    if (text == NULL || *text == '\0') {
+        *result = default_value;
+        return 1;
+    }
+
+    value = strtol(text, &end, 10);
+    if (*end != '\0' || value <= 0) {
+        return 0;
+    }
+
+    *result = (BLASLONG)value;
+    return 1;
+}
+#endif
+
 #if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
 /* Deterministic floating-point input pattern, repeated around zero. */
-static void fill_input(INPUT_T *x, size_t n)
+static void fill_input(INPUT_T *x, size_t n, uint32_t seed)
 {
+    uint32_t state = seed;
+
     for (size_t i = 0; i < n; ++i) {
-        x[i] = (INPUT_T)((int)(i % 13) - 6) * (INPUT_T)0.1;
+        x[i] = (INPUT_T)((int)(next_test_value(&state) % 13U) - 6) *
+               (INPUT_T)0.1;
     }
 }
 
-static void fill_output(OUTPUT_T *x, size_t n)
+static void fill_output(OUTPUT_T *x, size_t n, uint32_t seed)
 {
-    fill_input(x, n);
+    fill_input(x, n, seed);
 }
 #else
-/* Deterministic INT8 input pattern: -6, -5, ..., 6, then repeat. */
-static void fill_input(INPUT_T *x, size_t n)
+/* Deterministic pseudo-random INT8 input values in the safe range [-6, 6]. */
+static void fill_input(INPUT_T *x, size_t n, uint32_t seed)
 {
+    uint32_t state = seed;
+
     for (size_t i = 0; i < n; ++i) {
-        x[i] = (INPUT_T)((int)(i % 13) - 6);
+        x[i] = (INPUT_T)((int)(next_test_value(&state) % 13U) - 6);
     }
 }
 
 /* Initial INT32 C values before GEMM applies C = C + A*B. */
-static void fill_output(OUTPUT_T *x, size_t n)
+static void fill_output(OUTPUT_T *x, size_t n, uint32_t seed)
 {
+    uint32_t state = seed;
+
     for (size_t i = 0; i < n; ++i) {
-        x[i] = (OUTPUT_T)((int)(i % 7) - 3);
+        x[i] = (OUTPUT_T)((int)(next_test_value(&state) % 7U) - 3);
     }
 }
 #endif
 
 /*
- * ROADMAP BLOCK 4: Bring the three supporting parts into this program
+ * ROADMAP BLOCK 4: Bring the four supporting parts into this program
  * -------------------------------------------------------------------
  * They are headers because each compiled kernel needs the same small framework.
  */
 #include "openmp_kernel_dispatch.h"
 #include "openmp_validation.h"
 #include "openmp_cluster_execution.h"
+#include "openmp_dynamic_execution.h"
+
+/* Run the scheduler selected for this executable invocation. */
+static int execute_tile_region(
+    BLASLONG M, BLASLONG N, BLASLONG K,
+    BLASLONG tile_n, BLASLONG tiles, BLASLONG schedule_chunk,
+    int schedule_is_dynamic,
+    INPUT_T *A, INPUT_T *B, OUTPUT_T *C,
+    int *worker_cpu, BLASLONG *worker_tiles,
+    INPUT_T **worker_a_pack, INPUT_T **worker_b_tile,
+    int *actual_threads, BLASLONG *ime_tile_count,
+    BLASLONG *rvv_tile_count, const char **failure_stage)
+{
+#if defined(OMP_KIND_INT8_MIXED)
+    if (schedule_is_dynamic) {
+        return run_openmp_dynamic_tile_region(
+            M, N, K, tile_n, tiles, schedule_chunk,
+            A, B, C, worker_cpu, worker_tiles,
+            worker_a_pack, worker_b_tile, actual_threads,
+            ime_tile_count, rvv_tile_count, failure_stage);
+    }
+#else
+    (void)schedule_chunk;
+    (void)schedule_is_dynamic;
+#endif
+
+    return run_openmp_tile_region(
+        M, N, K, tile_n, tiles, A, B, C,
+        worker_cpu, worker_tiles, worker_a_pack, worker_b_tile,
+        actual_threads, ime_tile_count, rvv_tile_count, failure_stage);
+}
 
 /* ROADMAP BLOCK 5: Main experiment starts here. */
 int main(int argc, char **argv)
@@ -193,13 +274,56 @@ int main(int argc, char **argv)
     BLASLONG tiles;                                      /* Total number of column tiles. */
 
     /* Step 2: Read optional runtime switches from environment variables.
-     * OMP_VALIDATE=1 checks correctness. OMP_WARMUP=1 runs one untimed warmup.
+     * GEMM_VALIDATE=1 checks correctness. GEMM_WARMUP=1 runs one untimed warmup.
      */
-    /* Read OMP_VALIDATE. If the user does not set it, validation stays ON. */
-    int validation_enabled = env_enabled("OMP_VALIDATE", 1);
+    /* Read GEMM_VALIDATE. If the user does not set it, validation stays ON. */
+    int validation_enabled = env_enabled("GEMM_VALIDATE", 1);
 
-    /* Read OMP_WARMUP. If the user does not set it, one warmup run is used. */
-    int warmup_enabled = env_enabled("OMP_WARMUP", 1);
+    /* Read GEMM_WARMUP. If the user does not set it, one warmup run is used. */
+    int warmup_enabled = env_enabled("GEMM_WARMUP", 1);
+
+    /*
+     * Scheduling setup: select the scheduling experiment.
+     * static  -> fixed IME/RVV ranges and two nested four-worker teams.
+     * dynamic -> one eight-worker team using schedule(dynamic, chunk).
+     */
+    const char *schedule_policy = "static";
+    BLASLONG schedule_chunk = 0;
+    int schedule_is_dynamic = 0;
+
+#if defined(OMP_KIND_INT8_MIXED)
+    {
+        const char *requested_policy = getenv("GEMM_TILE_SCHEDULE");
+
+        if (requested_policy != NULL && *requested_policy != '\0') {
+            schedule_policy = requested_policy;
+        }
+
+        if (strcmp(schedule_policy, "dynamic") == 0) {
+            schedule_is_dynamic = 1;
+            if (!read_positive_env("GEMM_DYNAMIC_CHUNK", 1,
+                                   &schedule_chunk)) {
+                fprintf(stderr, "GEMM_DYNAMIC_CHUNK must be a positive integer.\n");
+                return 1;
+            }
+        } else if (strcmp(schedule_policy, "static") != 0) {
+            fprintf(stderr,
+                    "GEMM_TILE_SCHEDULE must be static or dynamic.\n");
+            return 1;
+        }
+    }
+#else
+    /* Homogeneous baselines intentionally keep their original static loop. */
+    {
+        const char *requested_policy = getenv("GEMM_TILE_SCHEDULE");
+        if (requested_policy != NULL && *requested_policy != '\0' &&
+            strcmp(requested_policy, "static") != 0) {
+            fprintf(stderr,
+                    "Dynamic scheduling is available only for mixed K1 mode.\n");
+            return 1;
+        }
+    }
+#endif
 
     /* Step 3: Keep status variables for the run.
      * kernel_return reports kernel errors, validation_rc reports reference errors,
@@ -208,7 +332,7 @@ int main(int argc, char **argv)
     /* Start with success. If any kernel call fails, this becomes nonzero. */
     int kernel_return = 0;
 
-    /* Return code from the serial reference kernel used for validation. */
+    /* Return code from the independent mathematical reference. */
     int validation_rc = 0;
 
     /* Final yes/no flag: 1 means this benchmark run failed. */
@@ -217,9 +341,9 @@ int main(int argc, char **argv)
     /* Filled by OpenMP: how many threads actually entered the parallel region. */
     int actual_threads = 0;
 
-    /* Fixed mixed-mode ownership. Their sum equals the OpenMP tile count. */
-    BLASLONG ime_assigned_tiles = 0;
-    BLASLONG rvv_assigned_tiles = 0;
+    /* Static mode returns assigned tiles; dynamic mode returns completed tiles. */
+    BLASLONG ime_tile_count = 0;
+    BLASLONG rvv_tile_count = 0;
 
     /* Maximum OpenMP threads allowed by the runtime/environment. */
     int max_threads;
@@ -227,13 +351,13 @@ int main(int argc, char **argv)
     /* worker_cpu[tid] stores the Linux CPU/core where OpenMP thread tid ran. */
     int *worker_cpu;
 
-    /* worker_tiles[tid] stores how many C-column tiles thread tid computed. */
+    /* worker_tiles[tid] stores how many OpenMP C-column strips it computed. */
     BLASLONG *worker_tiles;
 
-    /* RVV workers in mixed mode use a private packed A buffer. */
+    /* Every RVV worker uses a private packed A buffer. */
     INPUT_T **worker_a_pack;
 
-    /* IME and mixed workers use a private compact/packed B buffer. */
+    /* Every worker uses a private compact or packed B strip. */
     INPUT_T **worker_b_tile;
 
     /* Human-readable place where failure happened; printed in the log. */
@@ -258,6 +382,7 @@ int main(int argc, char **argv)
      */
     double max_error = 0.0;
     size_t mismatch_count = 0;
+    size_t reference_overflow_count = 0;
 
     /* Step 6: Matrix element counts and byte counts.
      * These are calculated safely before allocation to avoid overflow.
@@ -273,7 +398,7 @@ int main(int argc, char **argv)
 
     /* Step 7: Main matrix pointers.
      * A and B are inputs. C is modified by OpenMP. C_initial stores the original C.
-     * C_reference stores the serial reference result when validation is enabled.
+     * C_reference stores the independent result when validation is enabled.
      */
     INPUT_T *A;
     INPUT_T *B;
@@ -328,7 +453,7 @@ int main(int argc, char **argv)
     /* Allocate a saved copy of the starting C values. */
     C_initial = (OUTPUT_T *)aligned_bytes(bytesC);
 
-    /* Allocate serial reference C only when validation is enabled. */
+    /* Allocate independent reference C only when validation is enabled. */
     if (validation_enabled) {
         C_reference = (OUTPUT_T *)aligned_bytes(bytesC);
     }
@@ -349,59 +474,42 @@ int main(int argc, char **argv)
      * Deterministic data makes repeated runs comparable and debuggable.
      */
     /* Fill matrix A with deterministic test values. */
-    fill_input(A, sizeA);
+    fill_input(A, sizeA, INPUT_SEED_A);
 
     /* Fill matrix B with deterministic test values. */
-    fill_input(B, sizeB);
+    fill_input(B, sizeB, INPUT_SEED_B);
 
     /* Fill the original C values before GEMM updates them. */
-    fill_output(C_initial, sizeC);
+    fill_output(C_initial, sizeC, INPUT_SEED_C);
 
     /* Step 14: Copy the initial C into the working C buffer.
      * GEMM updates C as C = C + alpha * A * B, so C must start from a known value.
      */
     memcpy(C, C_initial, bytesC);
 
-    /* Step 15: Optional warmup.
-     * This runs the selected kernel once before timing so cold-start effects are reduced.
-     */
-    if (warmup_enabled) {
-        /* Run one full GEMM before timing; this warms caches/runtime paths. */
-        int warmup_rc = call_full_kernel(M, N, K, A, B, C);
-        if (warmup_rc != 0) {
-            fprintf(stderr, "warmup kernel returned %d\n", warmup_rc);
-            kernel_return = warmup_rc;
-            failure_stage = "WARMUP";
-        }
-
-        /* Restore C after warmup because the timed run must start from C_initial. */
-        memcpy(C, C_initial, bytesC);
-    }
-
-    /* Step 16: Optional serial reference.
-     * The same selected kernel is run once serially over the full matrix.
-     * The OpenMP tiled result is compared against this reference later.
-     */
+    /* Step 15: Build an independent reference from the GEMM equation. */
     if (validation_enabled && kernel_return == 0) {
-        /* Reset reference C to the exact same starting values. */
-        memcpy(C_reference, C_initial, bytesC);
-
-        /* Compute serial reference C using the same selected kernel. */
-        validation_rc = call_full_kernel(M, N, K, A, B, C_reference);
+        validation_rc = compute_independent_reference(
+            M, N, K, A, B, C_initial, C_reference,
+            &reference_overflow_count);
         if (validation_rc != 0) {
-            fprintf(stderr, "serial validation kernel returned %d\n", validation_rc);
+            fprintf(stderr,
+                    "independent reference overflowed INT32 at %zu outputs\n",
+                    reference_overflow_count);
             kernel_return = validation_rc;
-            failure_stage = "SERIAL_REFERENCE";
+            failure_stage = "REFERENCE_OVERFLOW";
         }
     }
 
-    /* Step 17: Allocate per-thread bookkeeping.
+    /* Step 16: Allocate per-thread bookkeeping.
      * worker_cpu tells which CPU each thread actually used.
      * worker_tiles tells how much work each thread completed.
      */
     /* Mixed mode always creates two nested teams of four workers. */
 #if defined(OMP_KIND_INT8_MIXED)
     max_threads = 8;
+#elif defined(OMP_EXPECTED_THREADS)
+    max_threads = OMP_EXPECTED_THREADS;
 #else
     max_threads = omp_get_max_threads();
 #endif
@@ -429,14 +537,19 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Step 18: Initialize worker metadata and private packing buffers.
-     * IME workers use compact B tiles. In mixed mode, RVV workers additionally
-     * pack A before calling the low-level RVV kernel explicitly.
+    /* Step 17: Initialize worker metadata and private packing buffers.
+     * Every path starts from the same unpacked contract:
+     * A[k*M+row], B[k*N+column], and C[column*M+row]. RVV workers pack both
+     * panels during execution; IME workers compact B and let the
+     * native wrapper prepare its IME layout.
      */
     for (int i = 0; i < max_threads; ++i) {
+        int needs_a_pack;
+
         /* -1 means this worker has not reported a real CPU id yet. */
         worker_cpu[i] = -1;
-#if defined(OMP_KIND_INT8_IME) || defined(OMP_KIND_INT8_MIXED)
+
+        /* Every path needs private B scratch for its current output strip. */
         worker_b_tile[i] = (INPUT_T *)aligned_bytes(worker_b_tile_bytes);
         if (worker_b_tile[i] == NULL) {
             fprintf(stderr, "worker B-tile allocation failed\n");
@@ -457,10 +570,17 @@ int main(int argc, char **argv)
         }
         /* Keep allocation and initialization outside the timed region. */
         memset(worker_b_tile[i], 0, worker_b_tile_bytes);
-#endif
+
 #if defined(OMP_KIND_INT8_MIXED)
-        /* Only workers 4-7 execute the explicit RVV path. */
-        if (i >= 4) {
+        needs_a_pack = i >= 4;
+#elif defined(OMP_KIND_INT8_IME)
+        needs_a_pack = 0;
+#else
+        needs_a_pack = 1;
+#endif
+
+        /* RVV workers privately pack canonical A before each strip call. */
+        if (needs_a_pack) {
             worker_a_pack[i] = (INPUT_T *)aligned_bytes(bytesA);
             if (worker_a_pack[i] == NULL) {
                 fprintf(stderr, "RVV worker A-pack allocation failed\n");
@@ -481,11 +601,40 @@ int main(int argc, char **argv)
             }
             memset(worker_a_pack[i], 0, bytesA);
         }
-#endif
+    }
+
+    /* Step 18: Warm the exact scheduler and both execution paths, if requested. */
+    if (warmup_enabled && kernel_return == 0) {
+        const char *warmup_failure = "NONE";
+        int warmup_threads = 0;
+        BLASLONG warmup_ime_strips = 0;
+        BLASLONG warmup_rvv_strips = 0;
+        int warmup_rc = execute_tile_region(
+            M, N, K, tile_n, tiles, schedule_chunk, schedule_is_dynamic,
+            A, B, C, worker_cpu, worker_tiles,
+            worker_a_pack, worker_b_tile, &warmup_threads,
+            &warmup_ime_strips, &warmup_rvv_strips, &warmup_failure);
+
+        if (warmup_rc != 0) {
+            fprintf(stderr, "OpenMP warmup failed at %s with code %d\n",
+                    warmup_failure, warmup_rc);
+            kernel_return = warmup_rc;
+            failure_stage = "WARMUP";
+        }
+
+        memcpy(C, C_initial, bytesC);
+        memset(worker_tiles, 0, (size_t)max_threads * sizeof(BLASLONG));
+        for (int i = 0; i < max_threads; ++i) {
+            worker_cpu[i] = -1;
+        }
+        actual_threads = 0;
+        ime_tile_count = 0;
+        rvv_tile_count = 0;
     }
 
     /* ROADMAP BLOCK 6: Timed OpenMP tile region.
-     * This is the main heterogeneous part.
+     * This is the main heterogeneous part. The selected scheduler changes only
+     * tile ownership; both paths call the same IME and RVV micro-kernels.
      * Think of C as a large page and tile_N as the width of one strip.
      * For N=1024 and tile_N=32, the page has 32 strips.
      * In mixed mode, cores 0-3 compute their strips through IME and
@@ -496,15 +645,16 @@ int main(int argc, char **argv)
     /* Take timestamp immediately before OpenMP workers start computing C tiles. */
     t0 = now_sec();
     {
-        int parallel_return = run_openmp_tile_region(M, N, K, tile_n, tiles,
-                                                     A, B, C,
-                                                     worker_cpu, worker_tiles,
-                                                     worker_a_pack,
-                                                     worker_b_tile,
-                                                     &actual_threads,
-                                                     &ime_assigned_tiles,
-                                                     &rvv_assigned_tiles,
-                                                     &failure_stage);
+        int parallel_return = kernel_return;
+
+        if (kernel_return == 0) {
+            parallel_return = execute_tile_region(
+                M, N, K, tile_n, tiles, schedule_chunk,
+                schedule_is_dynamic, A, B, C,
+                worker_cpu, worker_tiles, worker_a_pack, worker_b_tile,
+                &actual_threads, &ime_tile_count, &rvv_tile_count,
+                &failure_stage);
+        }
 
         /* Keep an earlier warmup/reference error if one already happened. */
         if (kernel_return == 0) {
@@ -522,7 +672,7 @@ int main(int argc, char **argv)
      * A mismatch means the tile splitting or kernel dispatch produced a wrong C value.
      */
     if (validation_enabled && validation_rc == 0 && kernel_return == 0) {
-        /* Compare every C element from OpenMP result against the serial result. */
+        /* Compare every OpenMP C element against the independent result. */
         mismatch_count = compare_outputs(C, C_reference, sizeC, &max_error);
         if (mismatch_count != 0) {
             failure_stage = "NUMERICAL_VALIDATION";
@@ -547,12 +697,36 @@ int main(int argc, char **argv)
     /* Print human-readable run information. */
     printf("M=%ld N=%ld K=%ld tile_N=%ld tiles=%ld threads=%d\n",
            M, N, K, tile_n, tiles, actual_threads);
-    printf("TIMING_SCOPE=timed_parallel_tile_region\n");
+    printf("TIMING_SCOPE=parallel_tiles_including_required_packing\n");
+    printf("INPUT_SEEDS=A:0x%08x;B:0x%08x;C:0x%08x\n",
+           INPUT_SEED_A, INPUT_SEED_B, INPUT_SEED_C);
     printf("VALIDATION_METHOD=%s\n", validation_enabled ? VALIDATION_NAME : "DISABLED");
+    printf("REFERENCE_OVERFLOW_COUNT=%zu\n", reference_overflow_count);
     printf("FAILURE_STAGE=%s\n", failure_stage);
+    printf("SCHEDULING_POLICY=%s\n", schedule_policy);
+    printf("SCHEDULE_CHUNK=%ld\n", schedule_chunk);
+    printf("TILE_COUNT_UNIT=output_column_strips\n");
 #if defined(OMP_KIND_INT8_MIXED)
-    printf("STATIC_TILE_SPLIT=IME:%ld;RVV:%ld\n",
-           ime_assigned_tiles, rvv_assigned_tiles);
+    printf("EXECUTION_PATH=IME_NATIVE_PLUS_RVV_EXPLICIT\n");
+#elif defined(OMP_KIND_INT8_IME)
+    printf("EXECUTION_PATH=IME_NATIVE_REQUIRED\n");
+#elif defined(OMP_KIND_INT8_RVV)
+    printf("EXECUTION_PATH=RVV_INT8_EXPLICIT\n");
+#elif defined(OMP_KIND_FP32)
+    printf("EXECUTION_PATH=RVV_FP32_EXPLICIT\n");
+#else
+    printf("EXECUTION_PATH=RVV_FP64_EXPLICIT\n");
+#endif
+#if defined(OMP_KIND_INT8_MIXED)
+    printf("TILE_DISTRIBUTION=IME:%ld;RVV:%ld\n",
+           ime_tile_count, rvv_tile_count);
+    if (schedule_is_dynamic) {
+        printf("DYNAMIC_TILE_RESULT=IME:%ld;RVV:%ld\n",
+               ime_tile_count, rvv_tile_count);
+    } else {
+        printf("STATIC_TILE_SPLIT=IME:%ld;RVV:%ld\n",
+               ime_tile_count, rvv_tile_count);
+    }
 #endif
 
     /* Step 25: Print where each worker ran and how many tiles it completed.

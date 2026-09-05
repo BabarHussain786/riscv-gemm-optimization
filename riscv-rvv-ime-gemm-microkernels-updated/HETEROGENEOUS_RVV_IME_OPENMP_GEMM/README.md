@@ -1,113 +1,196 @@
 # Heterogeneous RVV-IME OpenMP GEMM
 
-This module compares homogeneous and heterogeneous GEMM execution on the K1. It keeps the existing RVV and IME micro-kernels unchanged and applies OpenMP only above the micro-kernel level.
+This module measures one INT8 x INT8 -> INT32 GEMM on the heterogeneous K1 processor. Cores 0-3 execute native IME kernels and cores 4-7 execute matching RVV kernels. The same kernels, matrices, validation, and timing rules are used for both scheduling policies.
 
-## Execution Model
-
-The output matrix `C` is divided into contiguous column tiles:
+## Project Roadmap
 
 ```text
-tiles = ceil(N / tile_N)
+Step 1 -> Create A[M x K], B[K x N], and C[M x N].
+Step 2 -> Divide C into non-overlapping column tiles of width tile_N.
+Step 3 -> Select static or dynamic OpenMP tile scheduling.
+Step 4 -> Pin IME workers to cores 0-3 and RVV workers to cores 4-7.
+Step 5 -> Call the selected 8x4 or 8x8 IME/RVV micro-kernel.
+Step 6 -> Check core placement, completed strips, and numerical output.
+Step 7 -> Save time, GOPS/GFLOPS, and statistics in CSV files.
 ```
 
-For `N=1024` and `tile_N=32`, there are 32 OpenMP tiles. In mixed INT8 mode, the tiles are divided once using the static IME:RVV weights:
+The OpenMP output-strip count is:
 
 ```text
-IME tiles = round(tiles * IME_WEIGHT / (IME_WEIGHT + RVV_WEIGHT))
-RVV tiles = tiles - IME tiles
-
-Default 4:1 split: IME=26 tiles, RVV=6 tiles
+output_strips = ceil(N / tile_N)
 ```
 
-OpenMP follows the K1 hierarchy:
+For `N=1024` and `tile_N=32`, `C` is divided into 32 independent column strips. This count is not the number of 8x4, 8x8, or native IME micro-tiles. Each strip has one owner, so workers never write the same output values.
+
+## Scheduling Policies
+
+| Policy | OpenMP structure | Tile assignment | Purpose |
+|---|---|---|---|
+| `static` | two outer cluster threads; four workers per cluster | fixed IME and RVV ranges | low-overhead reference for regular GEMM |
+| `dynamic` | one team of eight pinned workers | `schedule(dynamic, chunk)` | measure load balancing and scheduling overhead |
+
+The static IME share is computed once:
 
 ```text
-outer team: 2 cluster controllers
-  cluster 0: 4 workers on cores 0-3, native IME path
-  cluster 1: 4 workers on cores 4-7, explicit RVV path
+T_IME = round(T * W_IME / (W_IME + W_RVV))
+T_RVV = T - T_IME
 ```
 
-Each cluster runs `parallel for schedule(static)` over its fixed tile range. There is no global tile queue, atomic tile claim, or dynamic work scheduler. The IME team calls the native IME wrapper with hardware execution required; the RVV team calls the matching low-level RVV widening kernel directly. Because the two ranges contain different columns of `C`, workers never update the same output values.
+The default `4:1` weights give 26 IME tiles and 6 RVV tiles when `T=32`. Dynamic mode has no fixed ratio: a free worker receives the next OpenMP chunk, so the final IME/RVV counts are measured after execution.
 
-INT8 arithmetic is identical on both paths:
+Both paths compute the same equation:
 
 ```text
 C(i,j) = C(i,j) + sum_k A(i,k) * B(k,j)
-INT8 x INT8 -> INT32 accumulation and output
 ```
-
-FP32 and FP64 use RVV kernels on the selected cores. Native IME is used only for INT8-to-INT32 GEMM.
 
 ## Main Files
 
 ```text
-src/openmp_heterogeneous_gemm.c   matrix setup, timing, validation, output
-src/openmp_cluster_execution.h    nested 2-cluster OpenMP and static split
-src/openmp_kernel_dispatch.h      one OpenMP tile -> selected micro-kernel
-src/openmp_validation.h           serial same-kernel comparison
+src/openmp_heterogeneous_gemm.c   setup, policy selection, timing, and output
+src/openmp_cluster_execution.h    static two-cluster OpenMP execution
+src/openmp_dynamic_execution.h    dynamic eight-worker OpenMP execution
+src/openmp_kernel_dispatch.h      IME/RVV micro-kernel dispatch
+src/openmp_validation.h           independent reference and output comparison
 
 scripts/run_openmp_tiled_gemm_mode.sh
 scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
+scripts/run_k1_strong_scaling.sh
+scripts/run_k1_weak_scaling.sh
+scripts/run_k1_partitioning_analysis.sh
+scripts/run_k1_kernel_tuning.sh
 scripts/check_openmp_tiled_gemm_builds.sh
+analysis/plot_k1_paper_experiments.py
 ```
 
 ## K1 Modes
 
 | Mode | Cores | Execution |
 |---|---:|---|
-| `k1-rvv` | 0-7 | RVV all-core baseline |
+| `k1-rvv` | 0-7 | all-core RVV baseline |
 | `k1-rvv-only` | 4-7 | RVV-cluster baseline |
 | `k1-ime` | 0-3 | native IME-cluster baseline |
-| `k1-mixed-rvv-ime` | 0-7 | nested IME and RVV cluster teams |
+| `k1-mixed-rvv-ime` | 0-7 | heterogeneous static or dynamic execution |
 
-## Run
+## Run the Complete Campaign
 
-From this directory:
+The campaign runs homogeneous baselines, mixed static scheduling, and mixed dynamic scheduling:
 
 ```bash
 M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 \
 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
+DYNAMIC_CHUNK=1 \
 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
 ```
 
 Detached execution:
 
 ```bash
-nohup bash -lc 'M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh' > results/k1_openmp_nohup_latest.log 2>&1 &
+nohup bash -lc 'M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 DYNAMIC_CHUNK=1 bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh' > results/k1_openmp_nohup_latest.log 2>&1 &
 ```
 
-One mode only:
+Run only mixed static scheduling:
 
 ```bash
+GEMM_TILE_SCHEDULE=static \
 bash scripts/run_openmp_tiled_gemm_mode.sh k1-mixed-rvv-ime 1024 1024 1024 32 6
 ```
 
-The runner rejects mixed execution unless exactly eight workers are available. It also fails when no buildable kernel source is found, so an empty campaign cannot be reported as successful.
+Run only mixed dynamic scheduling:
+
+```bash
+GEMM_TILE_SCHEDULE=dynamic GEMM_DYNAMIC_CHUNK=1 \
+bash scripts/run_openmp_tiled_gemm_mode.sh k1-mixed-rvv-ime 1024 1024 1024 32 6
+```
+
+## K1 Paper Experiments
+
+The remaining K1 evaluations are separate so one interrupted study does not
+overwrite another study. Each script uses the validated INT8-to-INT32 paths
+and publishes timestamped results plus stable `latest` files.
+
+Strong scaling keeps `1024x1024x1024` fixed. It measures RVV with 1, 2, 4,
+and 8 workers; IME with 1, 2, and 4 workers; and both eight-worker
+heterogeneous policies. Linux `perf` records cycles, instructions, IPC, cache
+references, and cache misses:
+
+```bash
+bash scripts/run_k1_strong_scaling.sh
+```
+
+Set `COLLECT_PERF=0` only when hardware-counter access is unavailable.
+
+Weak scaling starts from `512x512x512` and scales each square dimension by
+the cube root of the worker count, rounded to a multiple of eight:
+
+```bash
+bash scripts/run_k1_weak_scaling.sh
+```
+
+Static/dynamic partitioning compares fixed IME:RVV ratios and dynamic chunk
+sizes using one matrix, kernel pair, and output-strip width:
+
+```bash
+bash scripts/run_k1_partitioning_analysis.sh
+```
+
+Kernel tuning sweeps `tile_N=8,16,32,64,128`. The existing inventory supplies
+the 8x4/8x8, LMUL, and unroll dimensions:
+
+```bash
+bash scripts/run_k1_kernel_tuning.sh
+```
+
+After these campaigns and the accuracy campaign finish, create every
+available K1 figure from measured CSV data:
+
+```bash
+python3 -m pip install -r analysis/requirements.txt
+python3 analysis/plot_k1_paper_experiments.py
+```
+
+Figures are saved as PNG and PDF under `analysis/figures/`. Missing inputs are
+reported and synthetic values are never substituted.
 
 ## Results
 
-The main analysis files are:
+Use these combined files for analysis:
 
 ```text
 results/k1_openmp_heterogeneous_raw_latest.csv
 results/k1_openmp_heterogeneous_summary_latest.csv
 ```
 
-Raw data records each run, matrix dimensions, tile width, timing, throughput, validation, worker placement, and the fixed IME/RVV tile split. Summary data reports mean, median, minimum, maximum, sample standard deviation, and timing for each kernel configuration.
-
-Mixed logs also print the fixed cluster ownership:
+Policy-specific aliases are also created:
 
 ```text
-STATIC_TILE_SPLIT=IME:26;RVV:6
-WORKER_PLACEMENT=0:cpu0:IME:...;...;7:cpu7:RVV:...
+results/openmp_raw_latest_k1-mixed-rvv-ime-static.csv
+results/openmp_raw_latest_k1-mixed-rvv-ime-dynamic.csv
 ```
 
-## Correctness and Timing
+Each row records the scheduling policy, dynamic chunk, observed IME/RVV output-strip distribution, worker placement, validation, time, and throughput. Summary rows report mean, median, minimum, maximum, and sample standard deviation.
 
-The first measured repetition compares the OpenMP result with an untimed serial execution of the same kernel. INT8 requires exact INT32 equality; FP32 and FP64 use absolute-plus-relative tolerance. Independent high-precision accuracy remains in the separate accuracy-validation module.
+Focused paper experiments publish these analysis files:
 
-The timed interval contains nested OpenMP team creation, static tile loops, required input packing, kernel execution, and output updates. Matrix allocation, OpenMP worker-buffer allocation, warmup, validation, and memory cleanup are outside the timed interval. Any temporary allocation performed internally by a selected micro-kernel remains part of that kernel's measured time.
+```text
+results/paper_experiments/k1_strong_scaling_raw_latest.csv
+results/paper_experiments/k1_weak_scaling_raw_latest.csv
+results/paper_experiments/k1_partitioning_raw_latest.csv
+results/paper_experiments/k1_kernel_tuning_raw_latest.csv
+```
 
-Thread affinity is checked at runtime for mixed K1 mode: workers 0-3 must execute on cores 0-3 and workers 4-7 on cores 4-7. This cluster-aware placement combines exact core affinity with contiguous output ownership. Each campaign also records the available system memory nodes from `/sys/devices/system/node/online`.
+All modes start from the same unpacked contract: `A[k*M+i]`, `B[k*N+j]`, and `C[j*M+i]`. Required RVV/IME packing is part of the timed tile region. In mixed mode, the RVV workers link the exact canonical source used by the pure-RVV campaign; the IME folder's separate fallback implementation is not used. Board runs pin every worker to one exact CPU and reject a placement mismatch. The first run is a mandatory correctness gate: INT8 uses independent INT64 accumulation followed by exact INT32 comparison, while FP32/FP64 use an independent higher-precision accumulation and tolerance. If validation fails, later repetitions for that kernel are not recorded.
 
-See `docs/k1_heterogeneous_openmp_methodology.md` for the complete experimental method.
+The campaign excludes configurations whose names do not match a valid VLEN=256 execution path: FP32 8x8 `LMUL=mf2`, FP64 8x4 `LMUL=1`, INT8 `LMUL=4/8`, and duplicate INT8 sources outside the canonical `GEMM_RVV_FP32_INT8_*` trees.
+
+## Valid Run Conditions
+
+```text
+workers:          exactly 8 in mixed mode
+IME placement:    workers 0-3 on cores 0-3
+RVV placement:    workers 4-7 on cores 4-7
+strip total:      IME strips + RVV strips = all output strips
+correctness:      mismatch_count = 0
+```
+
+See `docs/k1_heterogeneous_openmp_methodology.md` for the experimental method and `docs/openmp_result_schema.md` for every output field.

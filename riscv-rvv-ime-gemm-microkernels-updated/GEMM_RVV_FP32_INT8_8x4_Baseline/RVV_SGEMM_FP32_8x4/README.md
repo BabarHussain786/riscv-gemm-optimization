@@ -31,15 +31,19 @@ Build and run one variant:
 ```bash
 cd <kernel_variant>
 make clean && make
-./bench 1024 1024 1024
+GEMM_VALIDATE=1 ./bench 15 7 13
+GEMM_VALIDATE=0 ./bench 1024 1024 1024
 ```
 
 ## Dataflow Summary
 
 - Input panels are read using the layout expected by the benchmark driver.
 - The main tile path uses the selected backend and the LMUL/unroll setting encoded in the folder name.
+- The encoded unroll factor is applied to every K loop in both vector and scalar paths.
 - Boundary cleanup handles rows or columns not covered by full micro-tiles.
 - The output matrix is updated in column-major layout.
+- Validation compares the kernel output against an independent reference that
+  accumulates each FP32 dot product in double precision.
 
 ## Notes
 

@@ -1,46 +1,23 @@
-# RVV SGEMM FP32 Microkernels: 8x8 Tiles
+# RVV FP32 SGEMM Microkernels: 8x8
 
-## Purpose
-
-FP32 SGEMM microkernel family for benchmarking FP32 x FP32 -> FP32 with the 8x8 tile shape on RISC-V targets.
-
-## Variant Matrix
+This family contains 16 FP32 x FP32 -> FP32 RVV kernels for a VLEN=256 target.
 
 | Property | Value |
 |---|---|
-| Backend | RVV |
-| Tile shape | 8x8 |
-| Variant count | 20 |
-| ZVL target | 256b |
-| LMUL labels | lmulmf2, lmul1, lmul2, lmul4, lmul8 |
-| Unroll factors | unroll1, unroll2, unroll4, unroll8 |
-| Benchmark driver | `sgemm_bench.c` |
-| Reported metric | GFLOPS |
+| Software tile | 8x8 output values |
+| LMUL variants | 1, 2, 4, 8 |
+| K-loop unroll factors | 1, 2, 4, 8 |
+| Metric | GFLOPS |
+| Validation | Independent double-precision accumulation with FP32 tolerance |
 
-## Per-Variant Layout
+With SEW=32 and VLEN=256, `VLMAX = LMUL x 256 / 32`; therefore LMUL=1 provides eight FP32 lanes and is the smallest valid group for the eight-row tile. LMUL=1/2 provides only four lanes and is intentionally absent.
 
-```text
-<kernel_variant>/
-+-- <kernel_variant>.c
-+-- sgemm_bench.c
-+-- Makefile
-```
-
-Build and run one variant:
+Build and validate one variant:
 
 ```bash
-cd <kernel_variant>
+cd sgemm_kernel_8x8_zvl256b_lmul1_unroll1
 make clean && make
-./bench 1024 1024 1024
+GEMM_VALIDATE=1 ./bench 15 15 13
 ```
 
-## Dataflow Summary
-
-- Input panels are read using the layout expected by the benchmark driver.
-- The main tile path uses the selected backend and the LMUL/unroll setting encoded in the folder name.
-- Boundary cleanup handles rows or columns not covered by full micro-tiles.
-- The output matrix is updated in column-major layout.
-
-## Notes
-
-This family is used in the FP32 8x8 baseline and is included in both K1 and K3 RVV benchmark campaigns.
+The `15x15x13` check covers the 8x8 fast path and all 4/2/1 boundary paths before a regular 1024-cubed timing campaign.

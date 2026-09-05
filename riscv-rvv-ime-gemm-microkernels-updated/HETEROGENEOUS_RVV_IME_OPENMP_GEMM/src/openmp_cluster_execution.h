@@ -85,11 +85,15 @@ static BLASLONG mixed_ime_tile_count(BLASLONG tiles)
     return ime_tiles;
 }
 
+#endif
+
 /*
  * ROADMAP BLOCK 3: Put one worker on one exact core
  * -------------------------------------------------
  * CPU_SET selects one core. sched_setaffinity keeps this worker on that core.
+ * Both heterogeneous and homogeneous runs use this same strict check.
  */
+#if defined(OMP_KIND_INT8_MIXED) || defined(OMP_FIRST_CPU)
 static int pin_current_worker(int cpu)
 {
     cpu_set_t set;
@@ -247,6 +251,11 @@ static int run_openmp_tile_region(BLASLONG M, BLASLONG N, BLASLONG K,
                                     worker_id, cluster == 1,
                                     &kernel_return, failure_stage);
             }
+
+            /* Verify placement again after all kernel calls have finished. */
+            if (sched_getcpu() != target_cpu) {
+                pin_failed[worker_id] = 1;
+            }
         }
     }
 
@@ -301,11 +310,30 @@ static int run_openmp_tile_region(BLASLONG M, BLASLONG N, BLASLONG K,
     *ime_assigned_tiles = 0;
     *rvv_assigned_tiles = 0;
 
+    /* Do not let the OpenMP runtime silently shrink a homogeneous team. */
+    omp_set_dynamic(0);
+
+#if defined(OMP_EXPECTED_THREADS)
+#pragma omp parallel num_threads(OMP_EXPECTED_THREADS) shared(kernel_return)
+#else
 #pragma omp parallel shared(kernel_return)
+#endif
     {
         int worker_id = omp_get_thread_num();
 
+#if defined(OMP_FIRST_CPU)
+        /* Give homogeneous worker i exactly core OMP_FIRST_CPU+i. */
+        int target_cpu = OMP_FIRST_CPU + worker_id;
+        int pin_rc = pin_current_worker(target_cpu);
+
         worker_cpu[worker_id] = sched_getcpu();
+        if (pin_rc != 0 || worker_cpu[worker_id] != target_cpu) {
+            record_parallel_failure(1, "THREAD_AFFINITY",
+                                    &kernel_return, failure_stage);
+        }
+#else
+        worker_cpu[worker_id] = sched_getcpu();
+#endif
 #pragma omp single
         {
             *actual_threads = omp_get_num_threads();
@@ -319,7 +347,22 @@ static int run_openmp_tile_region(BLASLONG M, BLASLONG N, BLASLONG K,
                                 worker_b_tile[worker_id], worker_tiles,
                                 worker_id, 0, &kernel_return, failure_stage);
         }
+
+#if defined(OMP_FIRST_CPU)
+        /* Confirm that the worker stayed on the same exact CPU through GEMM. */
+        if (sched_getcpu() != target_cpu) {
+            record_parallel_failure(1, "THREAD_AFFINITY_AFTER_EXECUTION",
+                                    &kernel_return, failure_stage);
+        }
+#endif
     }
+
+#if defined(OMP_EXPECTED_THREADS)
+    if (*actual_threads != OMP_EXPECTED_THREADS && kernel_return == 0) {
+        kernel_return = 1;
+        *failure_stage = "THREAD_COUNT";
+    }
+#endif
 #endif
 
     /* Zero means every worker and kernel call completed successfully. */

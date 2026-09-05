@@ -334,14 +334,17 @@ static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
  * ROADMAP 3: Core selection for native IME
  * -----------------------------------------------------------------------------
  * Native IME instructions should run only on IME-capable cores. This block checks
- * the Linux CPU/device-tree information, temporarily pins the thread to a valid
- * core, and restores the original affinity at the end.
+ * the current Linux CPU/device-tree information without changing thread affinity.
+ * The benchmark or OpenMP caller is responsible for pinning the thread first.
  */
-/* Saves/restores CPU affinity while trying to run on an IME-capable core. */
+/* Records the checked CPU while leaving placement under caller control. */
 typedef struct ime_affinity_guard {
-    cpu_set_t saved_mask;
-    int active;
+    int checked_cpu;
 } ime_affinity_guard;
+
+/* Cache the device-tree result for the CPU currently used by this thread. */
+static _Thread_local int ime_cached_cpu = -1;
+static _Thread_local int ime_cached_cpu_has_ime = 0;
 
 /* Check Linux device-tree marker to see whether this CPU has AI/IME support. */
 static int cpu_has_ime(int cpu)
@@ -358,54 +361,34 @@ static int cpu_has_ime(int cpu)
     return stat(marker, &st) == 0;
 }
 
-/* Try to pin the current thread to an IME-capable CPU before native IME use. */
+/*
+ * Verify placement without moving the thread.
+ * The caller must pin IME work before entering the kernel.
+ */
 static int ime_affinity_guard_enter(ime_affinity_guard *guard)
 {
 #if SPACEMIT_IME_HAS_RVV
-    cpu_set_t target_mask;
-    int target = -1;
-    int cpu;
+    int cpu = sched_getcpu();
 
     memset(guard, 0, sizeof(*guard));
-    if (sched_getaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask) != 0) {
-        return 0;
-    }
+    guard->checked_cpu = cpu;
+    if (cpu < 0) return 0;
 
-    cpu = sched_getcpu();
-    if (cpu >= 0 && CPU_ISSET(cpu, &guard->saved_mask) && cpu_has_ime(cpu)) {
-        target = cpu;
-    } else {
-        for (cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-            if (CPU_ISSET(cpu, &guard->saved_mask) && cpu_has_ime(cpu)) {
-                target = cpu;
-                break;
-            }
-        }
+    if (cpu != ime_cached_cpu) {
+        ime_cached_cpu = cpu;
+        ime_cached_cpu_has_ime = cpu_has_ime(cpu);
     }
-
-    if (target < 0) return 0;
-    CPU_ZERO(&target_mask);
-    CPU_SET(target, &target_mask);
-    if (sched_setaffinity(0, sizeof(target_mask), &target_mask) != 0) return 0;
-    if (sched_getcpu() != target) {
-        (void)sched_setaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask);
-        return 0;
-    }
-
-    guard->active = 1;
-    return 1;
+    return ime_cached_cpu_has_ime;
 #else
     (void)guard;
     return 0;
 #endif
 }
 
-/* Restore the original CPU affinity after native IME work finishes. */
+/* CPU placement belongs to the caller, so the kernel has nothing to restore. */
 static void ime_affinity_guard_leave(ime_affinity_guard *guard)
 {
-    if (guard->active) {
-        (void)sched_setaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask);
-    }
+    (void)guard;
 }
 
 /*
@@ -788,7 +771,7 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
     }
 
     /* --- Step 2: choose native IME or fallback execution path ------------- */
-    /* If native IME is unavailable or CPU pinning fails, use RVV fallback. */
+    /* If native IME is unavailable on the current CPU, use RVV fallback. */
     if (!SPACEMIT_IME_NATIVE_ENABLED || !ime_affinity_guard_enter(&guard)) {
         if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
@@ -915,7 +898,6 @@ int ime_kernel_4x4_zvl256b_lmul1_unroll1_dual2x2x4(BLASLONG M, BLASLONG N, BLASL
 #undef IME_A100_DOT_STEP
 #undef IME_A60_DOT_STEP
 #endif
-
 
 
 

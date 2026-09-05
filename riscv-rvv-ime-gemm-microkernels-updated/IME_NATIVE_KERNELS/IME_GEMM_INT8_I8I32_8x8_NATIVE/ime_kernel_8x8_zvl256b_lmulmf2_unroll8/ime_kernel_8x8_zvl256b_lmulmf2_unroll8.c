@@ -109,6 +109,13 @@ static void *aligned_alloc_bytes(size_t bytes)
     if (posix_memalign(&ptr, IME_ALIGNMENT, padded) != 0) return NULL;
     return ptr;
 }
+static int env_flag_enabled(const char *name)
+{
+    const char *value = getenv(name);
+    if (value == NULL || value[0] == '\0') return 0;
+    if (value[0] == '0' || value[0] == 'n' || value[0] == 'N') return 0;
+    return 1;
+}
 
 static BLASLONG pick_row_block(BLASLONG left)
 {
@@ -212,10 +219,14 @@ static int rvv_fallback_gemm(BLASLONG M, BLASLONG N, BLASLONG K,
 }
 
 typedef struct ime_affinity_guard {
-    cpu_set_t saved_mask;
-    int active;
+    int checked_cpu;
 } ime_affinity_guard;
 
+/* Cache the device-tree result for the CPU currently used by this thread. */
+static _Thread_local int ime_cached_cpu = -1;
+static _Thread_local int ime_cached_cpu_has_ime = 0;
+
+/* Check Linux device-tree marker to see whether this CPU has AI/IME support. */
 static int cpu_has_ime(int cpu)
 {
     char marker[128];
@@ -230,52 +241,34 @@ static int cpu_has_ime(int cpu)
     return stat(marker, &st) == 0;
 }
 
+/*
+ * Verify placement without moving the thread.
+ * The caller must pin IME work before entering the kernel.
+ */
 static int ime_affinity_guard_enter(ime_affinity_guard *guard)
 {
 #if SPACEMIT_IME_HAS_RVV
-    cpu_set_t target_mask;
-    int target = -1;
-    int cpu;
+    int cpu = sched_getcpu();
 
     memset(guard, 0, sizeof(*guard));
-    if (sched_getaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask) != 0) {
-        return 0;
-    }
+    guard->checked_cpu = cpu;
+    if (cpu < 0) return 0;
 
-    cpu = sched_getcpu();
-    if (cpu >= 0 && CPU_ISSET(cpu, &guard->saved_mask) && cpu_has_ime(cpu)) {
-        target = cpu;
-    } else {
-        for (cpu = 0; cpu < CPU_SETSIZE; ++cpu) {
-            if (CPU_ISSET(cpu, &guard->saved_mask) && cpu_has_ime(cpu)) {
-                target = cpu;
-                break;
-            }
-        }
+    if (cpu != ime_cached_cpu) {
+        ime_cached_cpu = cpu;
+        ime_cached_cpu_has_ime = cpu_has_ime(cpu);
     }
-
-    if (target < 0) return 0;
-    CPU_ZERO(&target_mask);
-    CPU_SET(target, &target_mask);
-    if (sched_setaffinity(0, sizeof(target_mask), &target_mask) != 0) return 0;
-    if (sched_getcpu() != target) {
-        (void)sched_setaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask);
-        return 0;
-    }
-
-    guard->active = 1;
-    return 1;
+    return ime_cached_cpu_has_ime;
 #else
     (void)guard;
     return 0;
 #endif
 }
 
+/* CPU placement belongs to the caller, so the kernel has nothing to restore. */
 static void ime_affinity_guard_leave(ime_affinity_guard *guard)
 {
-    if (guard->active) {
-        (void)sched_setaffinity(0, sizeof(guard->saved_mask), &guard->saved_mask);
-    }
+    (void)guard;
 }
 
 static ime_profile detect_ime_profile(void)
@@ -532,17 +525,28 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
     size_t a_all_size;
     int8_t *A_all = NULL;
     int8_t *B_pack = NULL;
+    int force_native;
 
     memset(&guard, 0, sizeof(guard));
     if (M <= 0 || N <= 0 || K <= 0 || alpha == 0) return 0;
     if (A == NULL || B == NULL || C == NULL || ldc < M) return -1;
+
+    force_native = env_flag_enabled("SPACEMIT_IME_FORCE_NATIVE");
+    if (env_flag_enabled("SPACEMIT_IME_FORCE_SCALAR")) {
+        return scalar_gemm_full(M, N, K, alpha, A, B, C, ldc);
+    }
+    if (env_flag_enabled("SPACEMIT_IME_FORCE_RVV")) {
+        return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
+    }
     if (!SPACEMIT_IME_NATIVE_ENABLED || !ime_affinity_guard_enter(&guard)) {
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
     profile = detect_ime_profile();
     if (profile == IME_PROFILE_NONE) {
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
@@ -555,6 +559,7 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
         !size_mul_ok((size_t)IME_MR, (size_t)K_main, &a_panel_size) ||
         !size_mul_ok((size_t)m_blocks, a_panel_size, &a_all_size)) {
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 
@@ -565,6 +570,7 @@ static int ime_gemm_s8s8(BLASLONG M, BLASLONG N, BLASLONG K,
         free(A_all);
         free(B_pack);
         ime_affinity_guard_leave(&guard);
+        if (force_native) return -98;
         return rvv_fallback_gemm(M, N, K, alpha, A, B, C, ldc);
     }
 

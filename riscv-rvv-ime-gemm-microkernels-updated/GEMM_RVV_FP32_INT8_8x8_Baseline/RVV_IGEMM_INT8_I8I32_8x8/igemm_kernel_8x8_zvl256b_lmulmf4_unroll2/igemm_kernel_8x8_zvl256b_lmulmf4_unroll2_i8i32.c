@@ -37,6 +37,16 @@ Settings:
 #include <riscv_vector.h>
 
 typedef long BLASLONG;
+
+/* INT32 GEMM output is defined modulo 2^32; avoid signed-overflow UB in C. */
+static inline int32_t add_scaled_wrap_i32(int32_t dst, int32_t alpha, int64_t dot)
+{
+    const uint32_t sum = (uint32_t)dst + (uint32_t)dot * (uint32_t)alpha;
+    return sum <= (uint32_t)INT32_MAX
+               ? (int32_t)sum
+               : (int32_t)((int64_t)sum - (INT64_C(1) << 32));
+}
+
 int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASLONG K, int32_t alpha, int8_t *A, int8_t *B, int32_t *C, BLASLONG ldc)
 {
     BLASLONG m_top = 0;
@@ -105,35 +115,35 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp7, result7, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp2[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp2[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp3[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp3[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp4[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp4[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp5[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp5[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp6[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp6[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp7[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp7[r]));
             }
             m_top += 8;
         }
@@ -191,35 +201,35 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp7, result7, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp2[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp2[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp3[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp3[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp4[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp4[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp5[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp5[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp6[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp6[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp7[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp7[r]));
             }
             m_top += 4;
         }
@@ -241,8 +251,8 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 8; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n * 2 + 0];
-                C[ci + n * ldc + 1] += alpha * (int32_t)result[n * 2 + 1];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n * 2 + 0]));
+                C[ci + n * ldc + 1] = add_scaled_wrap_i32(C[ci + n * ldc + 1], alpha, (int64_t)(result[n * 2 + 1]));
             }
             m_top += 2;
         }
@@ -262,7 +272,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 8; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n]));
             }
             m_top += 1;
         }
@@ -304,19 +314,19 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp3, result3, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp2[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp2[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp3[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp3[r]));
             }
             m_top += 8;
         }
@@ -353,19 +363,19 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp3, result3, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp2[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp2[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp3[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp3[r]));
             }
             m_top += 4;
         }
@@ -387,8 +397,8 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 4; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n * 2 + 0];
-                C[ci + n * ldc + 1] += alpha * (int32_t)result[n * 2 + 1];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n * 2 + 0]));
+                C[ci + n * ldc + 1] = add_scaled_wrap_i32(C[ci + n * ldc + 1], alpha, (int64_t)(result[n * 2 + 1]));
             }
             m_top += 2;
         }
@@ -408,7 +418,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 4; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n]));
             }
             m_top += 1;
         }
@@ -440,11 +450,11 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp1, result1, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             m_top += 8;
         }
@@ -471,11 +481,11 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp1, result1, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             ci += ldc;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp1[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp1[r]));
             }
             m_top += 4;
         }
@@ -497,8 +507,8 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 2; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n * 2 + 0];
-                C[ci + n * ldc + 1] += alpha * (int32_t)result[n * 2 + 1];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n * 2 + 0]));
+                C[ci + n * ldc + 1] = add_scaled_wrap_i32(C[ci + n * ldc + 1], alpha, (int64_t)(result[n * 2 + 1]));
             }
             m_top += 2;
         }
@@ -518,7 +528,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 2; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n]));
             }
             m_top += 1;
         }
@@ -545,7 +555,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp0, result0, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 8; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             m_top += 8;
         }
@@ -567,7 +577,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             __riscv_vse32_v_i32m1(tmp0, result0, gvl);
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG r = 0; r < 4; ++r) {
-                C[ci + r] += alpha * tmp0[r];
+                C[ci + r] = add_scaled_wrap_i32(C[ci + r], alpha, (int64_t)(tmp0[r]));
             }
             m_top += 4;
         }
@@ -589,8 +599,8 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 1; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n * 2 + 0];
-                C[ci + n * ldc + 1] += alpha * (int32_t)result[n * 2 + 1];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n * 2 + 0]));
+                C[ci + n * ldc + 1] = add_scaled_wrap_i32(C[ci + n * ldc + 1], alpha, (int64_t)(result[n * 2 + 1]));
             }
             m_top += 2;
         }
@@ -610,7 +620,7 @@ int igemm_kernel_8x8_zvl256b_lmulmf4_unroll2_i8i32(BLASLONG M, BLASLONG N, BLASL
             }
             BLASLONG ci = n_top * ldc + m_top;
             for (BLASLONG n = 0; n < 1; ++n) {
-                C[ci + n * ldc + 0] += alpha * (int32_t)result[n];
+                C[ci + n * ldc + 0] = add_scaled_wrap_i32(C[ci + n * ldc + 0], alpha, (int64_t)(result[n]));
             }
             m_top += 1;
         }

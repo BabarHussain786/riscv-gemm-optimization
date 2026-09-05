@@ -6,15 +6,77 @@
  * ==================
  * This file answers one simple question: did OpenMP change the answer?
  *
- * Step 1 -> The main file computes C_reference with one serial kernel call.
+ * Step 1 -> Compute C_reference directly from the GEMM equation.
  * Step 2 -> OpenMP computes C_actual by sharing output strips among workers.
  * Step 3 -> This file compares every matching position in the two matrices.
  * Step 4 -> It counts wrong values and remembers the largest difference.
  *
  * INT8/IME must match exactly because both paths produce INT32 values.
  * FP32/FP64 use a small tolerance because floating-point rounding can differ.
- * A mismatch count of zero means the tiled assembly produced the same output.
+ * The reference never calls the tested kernel, so a kernel cannot validate
+ * itself. A mismatch count of zero means the tested path matches independent
+ * matrix multiplication.
  */
+
+static int compute_independent_reference(
+    BLASLONG M, BLASLONG N, BLASLONG K,
+    const INPUT_T *A, const INPUT_T *B,
+    const OUTPUT_T *C_initial, OUTPUT_T *reference,
+    size_t *overflow_count)
+{
+    size_t overflow = 0;
+
+#if defined(OMP_KIND_FP32)
+#pragma omp parallel for schedule(static)
+    for (BLASLONG column = 0; column < N; ++column) {
+        for (BLASLONG row = 0; row < M; ++row) {
+            double sum = 0.0;
+            for (BLASLONG k = 0; k < K; ++k) {
+                sum += (double)A[k * M + row] *
+                       (double)B[k * N + column];
+            }
+            reference[column * M + row] =
+                (OUTPUT_T)((double)C_initial[column * M + row] + sum);
+        }
+    }
+#elif defined(OMP_KIND_FP64)
+#pragma omp parallel for schedule(static)
+    for (BLASLONG column = 0; column < N; ++column) {
+        for (BLASLONG row = 0; row < M; ++row) {
+            long double sum = 0.0L;
+            for (BLASLONG k = 0; k < K; ++k) {
+                sum += (long double)A[k * M + row] *
+                       (long double)B[k * N + column];
+            }
+            reference[column * M + row] =
+                (OUTPUT_T)((long double)C_initial[column * M + row] + sum);
+        }
+    }
+#else
+#pragma omp parallel for schedule(static) reduction(+:overflow)
+    for (BLASLONG column = 0; column < N; ++column) {
+        for (BLASLONG row = 0; row < M; ++row) {
+            int64_t sum = 0;
+            int64_t value;
+
+            for (BLASLONG k = 0; k < K; ++k) {
+                sum += (int64_t)A[k * M + row] *
+                       (int64_t)B[k * N + column];
+            }
+            value = (int64_t)C_initial[column * M + row] + sum;
+            if (value < INT32_MIN || value > INT32_MAX) {
+                ++overflow;
+                reference[column * M + row] = 0;
+            } else {
+                reference[column * M + row] = (OUTPUT_T)value;
+            }
+        }
+    }
+#endif
+
+    *overflow_count = overflow;
+    return overflow == 0 ? 0 : -1;
+}
 
 static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
                               size_t n, double *max_error)
@@ -76,4 +138,3 @@ static size_t compare_outputs(const OUTPUT_T *actual, const OUTPUT_T *reference,
 }
 
 #endif /* OPENMP_VALIDATION_H */
-

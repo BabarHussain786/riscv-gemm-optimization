@@ -2,6 +2,10 @@
 
 This folder keeps one accuracy method for the paper: exact INT8-to-INT32 reference comparison between the native IME path and the RVV fallback path.
 
+The runner selects both paths explicitly. Native IME is pinned to an
+IME-capable core, while the comparison run is forced through the separate RVV
+implementation. The native wrapper does not move the process to another core.
+
 ## What It Checks
 
 For each tested kernel, the checker computes:

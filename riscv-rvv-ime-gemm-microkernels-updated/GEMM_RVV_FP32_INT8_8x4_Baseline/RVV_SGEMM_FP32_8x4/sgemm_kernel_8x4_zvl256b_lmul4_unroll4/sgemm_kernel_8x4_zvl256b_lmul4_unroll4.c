@@ -87,7 +87,7 @@ static inline void vec_block_8xN(BLASLONG cols, BLASLONG K,
     BLASLONG ai = 8;
     BLASLONG bi = cols;
 
-#pragma GCC unroll 1
+#pragma GCC unroll 4
     for (BLASLONG k = 1; k < K; ++k) {
         a0 = __riscv_vle32_v_f32m4(&Ablk[ai], gvl);
         a1 = __riscv_vle32_v_f32m4(&Ablk[ai + gvl], gvl);
@@ -183,7 +183,7 @@ static inline void vec_block_4xN(BLASLONG cols, BLASLONG K,
     BLASLONG ai = 4;
     BLASLONG bi = cols;
 
-#pragma GCC unroll 1
+#pragma GCC unroll 4
     for (BLASLONG k = 1; k < K; ++k) {
         a0 = __riscv_vle32_v_f32m4(&Ablk[ai], gvl);
         ai += 4;

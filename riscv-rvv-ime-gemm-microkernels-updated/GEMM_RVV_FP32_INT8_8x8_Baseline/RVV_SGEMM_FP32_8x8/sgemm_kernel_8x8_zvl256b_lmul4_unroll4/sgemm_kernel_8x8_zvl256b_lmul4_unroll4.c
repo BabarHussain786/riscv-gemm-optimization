@@ -481,51 +481,52 @@ int sgemm_kernel_8x8_zvl256b_lmul4_unroll4(BLASLONG M, BLASLONG N, BLASLONG K, F
         }
 
         if (M & 2) {
-            float result0 = 0;
-            float result1 = 0;
-            float result2 = 0;
-            float result3 = 0;
+            float result[8] = {0.0f};
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
 
 #pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; k++) {
-                result0 += A[ai + 0] * B[bi + 0];
-                result1 += A[ai + 1] * B[bi + 0];
-                result2 += A[ai + 0] * B[bi + 1];
-                result3 += A[ai + 1] * B[bi + 1];
+            for (BLASLONG k = 0; k < K; ++k) {
+                const float a0 = A[ai + 0];
+                const float a1 = A[ai + 1];
+                for (BLASLONG n = 0; n < 4; ++n) {
+                    const float bn = B[bi + n];
+                    result[n * 2 + 0] += a0 * bn;
+                    result[n * 2 + 1] += a1 * bn;
+                }
                 ai += 2;
-                bi += 2;
+                bi += 4;
             }
 
             BLASLONG ci = n_top * ldc + m_top;
-            C[ci + 0 * ldc + 0] += alpha * result0;
-            C[ci + 0 * ldc + 1] += alpha * result1;
-            C[ci + 1 * ldc + 0] += alpha * result2;
-            C[ci + 1 * ldc + 1] += alpha * result3;
+            for (BLASLONG n = 0; n < 4; ++n) {
+                C[ci + n * ldc + 0] += alpha * result[n * 2 + 0];
+                C[ci + n * ldc + 1] += alpha * result[n * 2 + 1];
+            }
             m_top += 2;
         }
 
         if (M & 1) {
-            float result0 = 0;
-            float result1 = 0;
+            float result[4] = {0.0f};
             BLASLONG ai = m_top * K;
             BLASLONG bi = n_top * K;
 
 #pragma GCC unroll 4
-            for (BLASLONG k = 0; k < K; k++) {
-                result0 += A[ai + 0] * B[bi + 0];
-                result1 += A[ai + 0] * B[bi + 1];
+            for (BLASLONG k = 0; k < K; ++k) {
+                const float a0 = A[ai];
+                for (BLASLONG n = 0; n < 4; ++n) {
+                    result[n] += a0 * B[bi + n];
+                }
                 ai += 1;
-                bi += 2;
+                bi += 4;
             }
 
             BLASLONG ci = n_top * ldc + m_top;
-            C[ci + 0 * ldc + 0] += alpha * result0;
-            C[ci + 1 * ldc + 0] += alpha * result1;
+            for (BLASLONG n = 0; n < 4; ++n) {
+                C[ci + n * ldc] += alpha * result[n];
+            }
             m_top += 1;
         }
-
         n_top += 4;
     }
 

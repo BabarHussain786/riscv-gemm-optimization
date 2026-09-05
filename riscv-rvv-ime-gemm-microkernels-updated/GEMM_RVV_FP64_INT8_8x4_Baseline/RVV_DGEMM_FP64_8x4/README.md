@@ -1,46 +1,25 @@
 # RVV DGEMM FP64 Microkernels: 8x4 Tiles
 
-## Purpose
-
-FP64 DGEMM microkernel family for benchmarking FP64 x FP64 -> FP64 with the 8x4 tile shape on RISC-V targets.
-
-## Variant Matrix
+This folder contains the validated FP64 x FP64 -> FP64 RVV microkernels for the 8x4 output tile on a VLEN=256 target.
 
 | Property | Value |
 |---|---|
-| Backend | RVV |
+| Backend | RVV 1.0 |
 | Tile shape | 8x4 |
-| Variant count | 16 |
-| ZVL target | 256b |
-| LMUL labels | lmul1, lmul2, lmul4, lmul8 |
-| Unroll factors | unroll1, unroll2, unroll4, unroll8 |
-| Benchmark driver | `dgemm_bench.c` |
-| Reported metric | GFLOPS |
+| Retained variants | 12 |
+| Compile target | `rv64gcv_zvl256b` |
+| LMUL labels | lmul2, lmul4, lmul8 |
+| Unroll factors | 1, 2, 4, 8 |
+| Output | FP64 |
+| Metric | GFLOPS |
 
-## Per-Variant Layout
-
-```text
-<kernel_variant>/
-+-- <kernel_variant>.c
-+-- dgemm_bench.c
-+-- Makefile
-```
-
-Build and run one variant:
+Each variant contains its kernel source, `dgemm_bench.c`, and `Makefile`. The benchmark supports `GEMM_VALIDATE=1`, which compares every output value with an independent packed-panel reference before timing campaigns.
 
 ```bash
 cd <kernel_variant>
 make clean && make
+GEMM_VALIDATE=1 ./bench 15 7 13
 ./bench 1024 1024 1024
 ```
 
-## Dataflow Summary
-
-- Input panels are read using the layout expected by the benchmark driver.
-- The main tile path uses the selected backend and the LMUL/unroll setting encoded in the folder name.
-- Boundary cleanup handles rows or columns not covered by full micro-tiles.
-- The output matrix is updated in column-major layout.
-
-## Notes
-
-This family evaluates FP64 RVV behavior for the 8x4 tile shape.
+The odd validation shape exercises the full vector path and every row/column remainder path. LMUL1 is intentionally excluded: on VLEN=256, `VLMAX = 256 / 64 = 4`, which cannot represent the kernel's eight-row vector without an explicit split.
