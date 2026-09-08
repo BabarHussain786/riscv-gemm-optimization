@@ -153,10 +153,14 @@ run_kernel()
     local perf_log
     local perf_rc
     local status
+    local make_args=()
+    if [ "${kind}" = "IME" ]; then
+        make_args=(CFLAGS='-O3 -fno-tree-vectorize -fno-tree-slp-vectorize -march=rv64gcv_zvl256b -mabi=lp64d -std=c11 -Wall -Wno-unknown-pragmas')
+    fi
 
     log "KERNEL=${kind} ${kernel_name} core=${core}"
 
-    if ! (cd "${kernel_dir}" && make clean > "${build_log}" 2>&1 && make >> "${build_log}" 2>&1); then
+    if ! (cd "${kernel_dir}" && make clean > "${build_log}" 2>&1 && make "${make_args[@]}" >> "${build_log}" 2>&1); then
         log "  BUILD_FAILED log=${build_log}"
         printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
             "${kind}" "${kernel_name}" "${core}" "0" "BUILD_FAILED" "" "" "" "" "${M}x${N}x${K}" "${OUT_DIR}" "NA" "${build_log}" >> "${RAW_CSV}"
