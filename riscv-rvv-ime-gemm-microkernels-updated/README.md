@@ -66,6 +66,21 @@ campaign, because that would repeat the same complete benchmark:
 bash run_k1_01_rvv_ime_0_7_1024.sh
 ```
 
+For a direct INT8 micro-kernel check without OpenMP, use:
+
+```bash
+M=1024 N=1024 K=1024 RUNS=6 \
+bash run_k1_standalone_int8_kernels.sh
+```
+
+This command tests the 8x4 RVV and native IME kernels with `LMUL=1` and
+unroll factors `1,2,4,8` on RVV cores `4,5,6,7` and IME cores `0,1,2,3`.
+It uses one pinned process per run and prints a compact table. This is a
+kernel-throughput/tuning experiment, not strong scaling, because no OpenMP
+workers are used. When Linux `perf` is available, the table and CSV files also
+include IPC from the measured cycles and instructions; unavailable counters
+are recorded as `NA`.
+
 K3 benchmarks RVV cores 0-7 and the IME domain on cores 8-15:
 
 ```bash

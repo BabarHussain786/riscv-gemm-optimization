@@ -109,15 +109,20 @@ The remaining K1 evaluations are separate so one interrupted study does not
 overwrite another study. Each script uses the validated INT8-to-INT32 paths
 and publishes timestamped results plus stable `latest` files.
 
-Strong scaling keeps `1024x1024x1024` fixed. It measures RVV with 1, 2, 4,
-and 8 workers; IME with 1, 2, and 4 workers; and both eight-worker
-heterogeneous policies. Linux `perf` records cycles, instructions, IPC, cache
-references, and cache misses:
+Strong scaling keeps `1024x1024x1024` fixed. It measures the RVV and native IME
+8x4 INT8 kernels separately with 1, 2, 4, and 8 RVV workers or 1, 2, and 4
+IME workers. The default K1 Plot 1 run repeats this comparison for
+`LMUL=1` and unroll factors `1,2,4,8`. Static and dynamic heterogeneous
+policies are separate experiments and are excluded by default. Linux `perf`
+records cycles, instructions, IPC, cache references, and cache misses:
 
 ```bash
 bash scripts/run_k1_strong_scaling.sh
 ```
 
+The terminal prints a compact row-and-column summary. Detailed output for
+every kernel and run remains in the timestamped experiment log and CSV files.
+Set `INCLUDE_HETEROGENEOUS=1` only when heterogeneous rows are also required.
 Set `COLLECT_PERF=0` only when hardware-counter access is unavailable.
 
 Weak scaling starts from `512x512x512` and scales each square dimension by

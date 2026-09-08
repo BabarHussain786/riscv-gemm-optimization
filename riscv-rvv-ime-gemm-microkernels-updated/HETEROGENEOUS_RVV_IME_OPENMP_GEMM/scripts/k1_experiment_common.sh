@@ -87,6 +87,7 @@ run_experiment_case()
     local runner_raw
     local runner_summary
     local rc
+    local quiet_case_output="${EXPERIMENT_QUIET_CASES:-0}"
 
     if [ "${CASE_MODE}" = "k1-mixed-rvv-ime" ]; then
         result_tag="${CASE_MODE}-${CASE_SCHEDULE}"
@@ -101,22 +102,48 @@ run_experiment_case()
     experiment_log "============================================================"
     experiment_log "CASE series=${series} ${parameter_name}=${parameter_value} mode=${CASE_MODE} threads=${CASE_THREADS} M=${CASE_M} N=${CASE_N} K=${CASE_K} tile_N=${CASE_TILE_N} schedule=${CASE_SCHEDULE} chunk=${CASE_CHUNK} kernel=${CASE_KERNEL}"
 
-    OMP_NUM_THREADS="${CASE_THREADS}" \
-    KERNEL_FILTER="${CASE_KERNEL}" \
-    KIND_FILTER="${CASE_KIND}" \
-    GEMM_TILE_SCHEDULE="${CASE_SCHEDULE}" \
-    GEMM_DYNAMIC_CHUNK="${CASE_CHUNK}" \
-    MIXED_IME_TILE_WEIGHT="${CASE_IME_WEIGHT}" \
-    MIXED_RVV_TILE_WEIGHT="${CASE_RVV_WEIGHT}" \
-    ENABLE_MF2="${CASE_ENABLE_MF2}" \
-    PERF_STAT="${CASE_PERF_STAT}" \
-    PERF_EVENTS="${CASE_PERF_EVENTS}" \
-    GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 \
-        bash "${COMMON_RUNNER}" "${CASE_MODE}" \
-             "${CASE_M}" "${CASE_N}" "${CASE_K}" \
-             "${CASE_TILE_N}" "${CASE_RUNS}" 2>&1 |
-        tee -a "${EXPERIMENT_LOG}"
-    rc=${PIPESTATUS[0]}
+    # Keep the detailed runner output in the experiment log when the public
+    # script requests a compact terminal table. The raw and summary CSV files
+    # are still produced exactly as in the verbose mode.
+    if [ "${quiet_case_output}" = "1" ]; then
+        (
+            export OMP_NUM_THREADS="${CASE_THREADS}"
+            export KERNEL_FILTER="${CASE_KERNEL}"
+            export KIND_FILTER="${CASE_KIND}"
+            export GEMM_TILE_SCHEDULE="${CASE_SCHEDULE}"
+            export GEMM_DYNAMIC_CHUNK="${CASE_CHUNK}"
+            export MIXED_IME_TILE_WEIGHT="${CASE_IME_WEIGHT}"
+            export MIXED_RVV_TILE_WEIGHT="${CASE_RVV_WEIGHT}"
+            export ENABLE_MF2="${CASE_ENABLE_MF2}"
+            export PERF_STAT="${CASE_PERF_STAT}"
+            export PERF_EVENTS="${CASE_PERF_EVENTS}"
+            export GEMM_VALIDATE=1
+            export VALIDATE_EACH_RUN=0
+            bash "${COMMON_RUNNER}" "${CASE_MODE}" \
+                 "${CASE_M}" "${CASE_N}" "${CASE_K}" \
+                 "${CASE_TILE_N}" "${CASE_RUNS}"
+        ) >> "${EXPERIMENT_LOG}" 2>&1
+        rc=$?
+    else
+        (
+            export OMP_NUM_THREADS="${CASE_THREADS}"
+            export KERNEL_FILTER="${CASE_KERNEL}"
+            export KIND_FILTER="${CASE_KIND}"
+            export GEMM_TILE_SCHEDULE="${CASE_SCHEDULE}"
+            export GEMM_DYNAMIC_CHUNK="${CASE_CHUNK}"
+            export MIXED_IME_TILE_WEIGHT="${CASE_IME_WEIGHT}"
+            export MIXED_RVV_TILE_WEIGHT="${CASE_RVV_WEIGHT}"
+            export ENABLE_MF2="${CASE_ENABLE_MF2}"
+            export PERF_STAT="${CASE_PERF_STAT}"
+            export PERF_EVENTS="${CASE_PERF_EVENTS}"
+            export GEMM_VALIDATE=1
+            export VALIDATE_EACH_RUN=0
+            bash "${COMMON_RUNNER}" "${CASE_MODE}" \
+                 "${CASE_M}" "${CASE_N}" "${CASE_K}" \
+                 "${CASE_TILE_N}" "${CASE_RUNS}"
+        ) 2>&1 | tee -a "${EXPERIMENT_LOG}"
+        rc=${PIPESTATUS[0]}
+    fi
 
     if ! append_csv_with_metadata "${runner_raw}" "${EXPERIMENT_RAW}" \
             "${series}" "${parameter_name}" "${parameter_value}"; then
