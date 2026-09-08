@@ -644,7 +644,11 @@ compile_kernel()
             "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
                 "${define_kind}" "${extra_defines[@]}" \
                 -DCNAME="${rvv_symbol}" -c "${sources[1]}" -o "${rvv_obj}"
-            "${CC}" "${driver_obj}" "${native_obj}" "${rvv_obj}" -lm -o "${exe}"
+            # Link with the OpenMP runtime as well as the three compiled objects.
+            # The object files contain OpenMP calls, so -fopenmp is required here,
+            # not only during compilation.
+            "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
+                "${driver_obj}" "${native_obj}" "${rvv_obj}" -lm -o "${exe}"
         } > "${build_log}" 2>&1
         local rc=$?
         rm -f "${driver_obj}" "${native_obj}" "${rvv_obj}"
