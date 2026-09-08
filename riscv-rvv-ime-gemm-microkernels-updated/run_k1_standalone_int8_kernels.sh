@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+export LC_ALL=C
 
 # STANDALONE KERNEL BENCHMARK ROADMAP
 # Step 1 -> Build one direct RVV or IME micro-kernel.
@@ -58,6 +59,17 @@ log()
     printf '%s\n' "$*" | tee -a "${LIVE_LOG}"
 }
 
+# CPU numbers start at zero; matrix sizes and run counts must stay positive.
+require_core_id()
+{
+    case "$2" in
+        ''|*[!0-9]*)
+            printf 'ERROR: %s must be a non-negative integer, received %s\n' "$1" "$2" >&2
+            exit 1
+            ;;
+    esac
+}
+
 parse_time()
 {
     sed -nE 's/.*Time:[[:space:]]*([-+0-9.eE]+)[[:space:]]*sec.*/\1/p' |
@@ -74,9 +86,11 @@ parse_ipc()
 {
     awk -F',' '
     {
-        event=tolower($1);
-        value=$2;
-        gsub(/,/, "", value);
+        # perf stat -x,: count, unit, event, runtime, coverage, ...
+        event=tolower($3);
+        value=$1;
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", event);
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value);
         if (event ~ /^cycles/ && value ~ /^[0-9]+([.][0-9]+)?$/) cycles=value + 0;
         if (event ~ /^instructions/ && value ~ /^[0-9]+([.][0-9]+)?$/) instructions=value + 0;
     }
@@ -296,6 +310,11 @@ for value in "${M}" "${N}" "${K}" "${RUNS}"; do
     require_positive_integer "experiment value" "${value}"
 done
 
+# Check all core IDs before starting any benchmark.
+for core in ${RVV_CORES} ${IME_CORES}; do
+    require_core_id "CPU core" "${core}"
+done
+
 mkdir -p "${OUT_DIR}" "${BUILD_LOG_DIR}"
 mkdir -p "${PERF_LOG_DIR}"
 : > "${LIVE_LOG}"
@@ -318,12 +337,12 @@ for unroll in 1 2 4 8; do
     ime_kernel="ime_kernel_8x4_zvl256b_lmul1_unroll${unroll}"
 
     for core in ${RVV_CORES}; do
-        require_positive_integer "RVV core" "${core}"
+        require_core_id "RVV core" "${core}"
         run_kernel "RVV" "${RVV_ROOT}/${rvv_dir}" "${rvv_kernel}" "${core}"
     done
 
     for core in ${IME_CORES}; do
-        require_positive_integer "IME core" "${core}"
+        require_core_id "IME core" "${core}"
         run_kernel "IME" "${IME_ROOT}/${ime_kernel}" "${ime_kernel}" "${core}"
     done
 done
