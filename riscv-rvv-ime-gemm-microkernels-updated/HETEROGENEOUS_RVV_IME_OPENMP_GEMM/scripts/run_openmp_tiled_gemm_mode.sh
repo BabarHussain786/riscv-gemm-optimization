@@ -548,6 +548,7 @@ compile_kernel()
     local kernel_mr
     local kernel_nr
     local rvv_symbol
+    local driver_obj native_obj rvv_obj
 
     kernel_mr="$(printf '%s\n' "${symbol}" | sed -n 's/.*kernel_\([0-9]*\)x[0-9]*_.*/\1/p')"
     kernel_nr="$(printf '%s\n' "${symbol}" | sed -n 's/.*kernel_[0-9]*x\([0-9]*\)_.*/\1/p')"
@@ -621,6 +622,34 @@ compile_kernel()
             ;;
         *) return 1 ;;
     esac
+
+    # Mixed mode contains two C functions with different names: the native
+    # IME source keeps the IME symbol, while the RVV source keeps its own
+    # igemm_*_i8i32 symbol.  Compile them separately so one global CNAME
+    # cannot rename both functions to the same symbol.
+    if [ "${kind}" = "INT8_MIXED" ]; then
+        if [ "${#sources[@]}" -ne 2 ]; then
+            return 1
+        fi
+        driver_obj="${exe}.driver.o"
+        native_obj="${exe}.ime.o"
+        rvv_obj="${exe}.rvv.o"
+        {
+            "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
+                "${define_kind}" "${extra_defines[@]}" \
+                -DKERNEL_SYMBOL="${symbol}" -c "${TEMPLATE}" -o "${driver_obj}"
+            "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
+                "${define_kind}" "${extra_defines[@]}" \
+                -DCNAME="${symbol}" -c "${sources[0]}" -o "${native_obj}"
+            "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
+                "${define_kind}" "${extra_defines[@]}" \
+                -DCNAME="${rvv_symbol}" -c "${sources[1]}" -o "${rvv_obj}"
+            "${CC}" "${driver_obj}" "${native_obj}" "${rvv_obj}" -lm -o "${exe}"
+        } > "${build_log}" 2>&1
+        local rc=$?
+        rm -f "${driver_obj}" "${native_obj}" "${rvv_obj}"
+        return "${rc}"
+    fi
 
     "${CC}" ${CFLAGS_COMMON} -march="${march}" -mabi="${ABI}" \
         "${define_kind}" "${extra_defines[@]}" \

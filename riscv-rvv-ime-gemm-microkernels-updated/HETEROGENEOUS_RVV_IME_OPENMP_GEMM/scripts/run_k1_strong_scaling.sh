@@ -18,7 +18,7 @@ RVV_CORE_COUNTS="${RVV_CORE_COUNTS:-1 2 4 8}"
 IME_CORE_COUNTS="${IME_CORE_COUNTS:-1 2 4}"
 COLLECT_PERF="${COLLECT_PERF:-1}"
 PERF_EVENTS_LIST="${PERF_EVENTS_LIST:-cycles,instructions,cache-references,cache-misses}"
-RVV_KERNEL="${RVV_KERNEL:-igemm_kernel_8x4_zvl256b_lmul1_unroll4}"
+RVV_KERNEL="${RVV_KERNEL:-igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32}"
 IME_KERNEL="${IME_KERNEL:-ime_kernel_8x4_zvl256b_lmul1_unroll4}"
 INCLUDE_HETEROGENEOUS="${INCLUDE_HETEROGENEOUS:-1}"
 

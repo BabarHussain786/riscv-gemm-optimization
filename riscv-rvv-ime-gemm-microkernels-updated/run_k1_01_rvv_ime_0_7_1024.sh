@@ -24,6 +24,7 @@ LATEST_SUMMARY="${OUT_DIR}/k1_01_rvv_ime_summary_latest.csv"
 BUILD_FAILED_COUNT=0
 NO_BENCH_COUNT=0
 VALIDATION_FAILED_COUNT=0
+BOUNDARY_VALIDATION_FAILED_COUNT=0
 RUN_FAILED_COUNT=0
 OK_RUN_COUNT=0
 
@@ -179,13 +180,17 @@ validate_kernel() {
   local dir="$4"
   local campaign="$5"
   local core="$6"
+  local validate_m="${7}"
+  local validate_n="${8}"
+  local validate_k="${9}"
+  local validation_kind="${10}"
   local validation_log output rc
 
   validation_log="${RAW_DIR}/${baseline}_${family}_${kernel}_${campaign}_validation_${STAMP}.log"
 
   if output="$(cd "${dir}" && run_on_core "${core}" "${campaign}" \
       env GEMM_VALIDATE=1 IME_VALIDATE=1 ./bench \
-      "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}" 2>&1)"; then
+      "${validate_m}" "${validate_n}" "${validate_k}" 2>&1)"; then
     rc=0
   else
     rc=$?
@@ -197,22 +202,26 @@ validate_kernel() {
     printf 'Kernel: %s\n' "${kernel}"
     printf 'Campaign: %s\n' "${campaign}"
     printf 'Core: %s\n' "${core}"
-    printf 'ValidationMatrix: %sx%sx%s\n' "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}"
+    printf 'ValidationMatrix: %sx%sx%s\n' "${validate_m}" "${validate_n}" "${validate_k}"
     printf 'ReturnCode: %s\n' "${rc}"
     printf '%s\n' '--------------------------------------------------'
     printf '%s\n' "${output}"
   } > "${validation_log}"
 
   if [ "${rc}" -eq 0 ] && printf '%s\n' "${output}" | grep -q '^VALIDATION=OK'; then
-    log "  VALIDATION_OK: ${VALIDATE_M}x${VALIDATE_N}x${VALIDATE_K} on ${campaign} core ${core}"
+    log "  ${validation_kind}_VALIDATION_OK: ${validate_m}x${validate_n}x${validate_k} on ${campaign} core ${core}"
     return 0
   fi
 
-  log "  VALIDATION_FAILED: ${validation_log}"
-  VALIDATION_FAILED_COUNT=$((VALIDATION_FAILED_COUNT + 1))
+  log "  ${validation_kind}_VALIDATION_FAILED: ${validation_log}"
+  if [ "${validation_kind}" = "BOUNDARY" ]; then
+    BOUNDARY_VALIDATION_FAILED_COUNT=$((BOUNDARY_VALIDATION_FAILED_COUNT + 1))
+  else
+    VALIDATION_FAILED_COUNT=$((VALIDATION_FAILED_COUNT + 1))
+  fi
   csv_row "${baseline}" "${family}" "${kernel}" "${campaign}" "${core}" \
-      "$(core_domain "${core}")" "0" "${VALIDATE_M}" "${VALIDATE_N}" \
-      "${VALIDATE_K}" "NA" "" "" "VALIDATION_FAILED" "${rc}" \
+      "$(core_domain "${core}")" "0" "${validate_m}" "${validate_n}" \
+      "${validate_k}" "NA" "" "" "${validation_kind}_VALIDATION_FAILED" "${rc}" \
       "${validation_log}"
   return 1
 }
@@ -306,29 +315,37 @@ run_family() {
     if [ "${campaign_scope}" = "RVV_ONLY" ]; then
       validation_core="${RVV_CORES%% *}"
       if ! validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
-          "RVV" "${validation_core}"; then
+          "RVV" "${validation_core}" "${M}" "${N}" "${K}" "MAIN"; then
         continue
       fi
+      validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
+          "RVV" "${validation_core}" "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}" "BOUNDARY" || true
       run_core_list "${baseline}" "${family}" "${kernel}" "${dir}" "RVV" "${RVV_CORES}"
     elif [ "${campaign_scope}" = "IME_ONLY" ]; then
       validation_core="${IME_CORES%% *}"
       if ! validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
-          "IME" "${validation_core}"; then
+          "IME" "${validation_core}" "${M}" "${N}" "${K}" "MAIN"; then
         continue
       fi
+      validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
+          "IME" "${validation_core}" "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}" "BOUNDARY" || true
       run_core_list "${baseline}" "${family}" "${kernel}" "${dir}" "IME" "${IME_CORES}"
     else
       validation_core="${RVV_CORES%% *}"
       if ! validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
-          "RVV" "${validation_core}"; then
+          "RVV" "${validation_core}" "${M}" "${N}" "${K}" "MAIN"; then
         continue
       fi
+      validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
+          "RVV" "${validation_core}" "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}" "BOUNDARY" || true
       run_core_list "${baseline}" "${family}" "${kernel}" "${dir}" "RVV" "${RVV_CORES}"
       validation_core="${IME_CORES%% *}"
       if ! validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
-          "IME" "${validation_core}"; then
+          "IME" "${validation_core}" "${M}" "${N}" "${K}" "MAIN"; then
         continue
       fi
+      validate_kernel "${baseline}" "${family}" "${kernel}" "${dir}" \
+          "IME" "${validation_core}" "${VALIDATE_M}" "${VALIDATE_N}" "${VALIDATE_K}" "BOUNDARY" || true
       run_core_list "${baseline}" "${family}" "${kernel}" "${dir}" "IME" "${IME_CORES}"
     fi
   done
@@ -417,6 +434,7 @@ log "DONE status=${CAMPAIGN_STATUS}: $(date)"
 log "ok_runs=${OK_RUN_COUNT}"
 log "failed_runs=${RUN_FAILED_COUNT}"
 log "validation_failed=${VALIDATION_FAILED_COUNT}"
+log "boundary_validation_failed=${BOUNDARY_VALIDATION_FAILED_COUNT}"
 log "build_failed=${BUILD_FAILED_COUNT}"
 log "no_bench=${NO_BENCH_COUNT}"
 log "Live log: ${LIVE_LOG}"

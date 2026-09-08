@@ -196,6 +196,21 @@ while IFS= read -r kernel_dir; do
     zvl="$(kernel_field "${kernel}" 's/.*_zvl\([0-9]*b\)_.*/\1/p')"
     lmul="$(kernel_field "${kernel}" 's/.*_\(lmul[^_]*\)_.*/\1/p')"
     unroll="$(kernel_field "${kernel}" 's/.*_unroll\([0-9]*\).*/\1/p')"
+
+    # The primary accuracy campaign covers only the two validated regular
+    # IME software tiles.  Experimental 4x4 and LMUL=mf2 folders are kept
+    # available for separate experiments, but must not contaminate this CSV.
+    case "${tile_shape}" in
+        8x4|8x8) ;;
+        *)
+            log "SKIP experimental or unsupported tile: ${kernel}"
+            continue
+            ;;
+    esac
+    if [ "${lmul}" = "lmulmf2" ] && [ "${ENABLE_MF2}" != "1" ]; then
+        log "SKIP experimental LMUL=mf2: ${kernel}"
+        continue
+    fi
     mr="${tile_shape%x*}"
     nr="${tile_shape#*x}"
     symbol="${kernel}"
