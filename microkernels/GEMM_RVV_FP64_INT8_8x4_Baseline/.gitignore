@@ -1,0 +1,26 @@
+﻿# Build artifacts
+**/bench
+**/*.o
+**/*.obj
+**/*.a
+**/*.so
+**/*.dylib
+
+# Runtime logs and outputs
+*.log
+*.out
+
+# Generated benchmark/result directories
+**/benchmark_results_*/
+**/cluster*_results/
+**/core*_results/
+**/summary_results/
+**/summary_results*/
+**/single_core_results_*/
+**/output/
+**/extra/generated/
+**/extra/results/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
