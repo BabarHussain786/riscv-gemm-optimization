@@ -67,8 +67,15 @@ def build(args):
     if args.host_test:
         sources += [(HERE/'src/reference_adapter.c', [])]
     else:
+        # Most canonical RVV kernels honor CNAME, while the 8x8 sources also
+        # contain a literal function name.  Rename both forms in this
+        # out-of-tree translation unit so the adapter exports one stable
+        # callback and the IME fallback keeps its own symbol.  No source file
+        # in the kernel tree is edited.
+        rvv_symbol = rm['kernel']
         sources += [(HERE/'src/rvv_adapter.c', []), (HERE/'src/ime_adapter.c', []),
-                    (rvv, ['-DCNAME=bench_rvv_entry']), (ime.parent/'rvv_fallback.c', [])]
+                    (rvv, ['-DCNAME=bench_rvv_entry', f'-D{rvv_symbol}=bench_rvv_entry']),
+                    (ime.parent/'rvv_fallback.c', [])]
     objects, commands = [], []
     for index, (source, extra) in enumerate(sources):
         obj = out/f'unit_{index}.o'

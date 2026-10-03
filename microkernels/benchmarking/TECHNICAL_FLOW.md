@@ -26,7 +26,9 @@ Q columns at j0 in strip n0, it writes
 
 `benchmarking/src/rvv_adapter.c` includes that exact header with a no-op
 `KERNEL_SYMBOL` callback solely to separate packing from execution. The actual
-selected RVV source is compiled unchanged with `CNAME=bench_rvv_entry` and
+selected RVV source is compiled in an out-of-tree adapter translation unit with
+the stable callback name `bench_rvv_entry` (using `CNAME` and, for literal-name
+8x8 sources, a preprocessor symbol alias), and
 called on the packed buffers. It performs widening INT8/INT32 computation,
 tail handling, and the final C update internally. There is no separate output
 transpose in this interface.
