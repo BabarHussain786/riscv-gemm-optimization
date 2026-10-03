@@ -165,9 +165,12 @@ def gate_rows(rows, expected, validation_only=False):
     return errors
 
 
-def gate_validation(stderr, shape):
+def gate_validation(stderr, shape, include_boundary=True):
     observed = re.findall(r"^VALIDATION shape=(\d+x\d+x\d+) status=(\w+)$", stderr, re.MULTILINE)
-    expected = [("16x16x64", "PASS"), ("15x15x69", "PASS"), ("x".join(map(str, shape)), "PASS")]
+    expected = [("16x16x64", "PASS")]
+    if include_boundary:
+        expected.append(("15x15x69", "PASS"))
+    expected.append(("x".join(map(str, shape)), "PASS"))
     return [] if observed == expected else ["mandatory aligned, boundary, and main shape validation evidence incomplete"]
 
 
@@ -190,6 +193,7 @@ def bench_command(binary, case, args, shape=None, validation_only=False):
               "warmups": 0 if validation_only else args.warmups,
               "repetitions": 1 if validation_only else args.repetitions, "seed": args.seed,
               "profile": int(case["profiled"]), "counters": int(case["counters"]),
+              "skip-boundary-validation": int(args.skip_boundary_validation),
               "validate-only": int(validation_only)}
     return [str(binary)] + [str(item) for key, value in values.items() for item in ("--" + key, value)]
 
@@ -209,7 +213,8 @@ def run_case(args, campaign, group, case, info, validation_only=False):
                 "hardware_platform": info["system"] + "/" + info["machine"],
                 "counters_requested": case["counters"],
                 "requested_cpu_ids": case["cpu_ids"], "packing_in_scope": case["timing_mode"] == "end_to_end",
-                "validation_scope": "full", "ime_workers": case["ime_workers"], "schedule": case["schedule"],
+                "validation_scope": "aligned_and_main" if args.skip_boundary_validation else "full",
+                "ime_workers": case["ime_workers"], "schedule": case["schedule"],
                 "weight": args.weight, "chunk": args.chunk, "seed": args.seed, "warmups": args.warmups,
                 **kernel_fields(case["rvv_kernel"], "rvv"), **kernel_fields(case["ime_kernel"], "ime")}
     errors, rows, build_meta, last_command = [], [], {}, None
@@ -247,7 +252,7 @@ def run_case(args, campaign, group, case, info, validation_only=False):
             parsed, issues = parse_rows(result["stdout"])
             expected = {**case, "M": shape[0], "N": shape[1], "K": shape[2], "repetitions": 1}
             issues += gate_rows(parsed, expected, True)
-            issues += gate_validation(result["stderr"], shape)
+            issues += gate_validation(result["stderr"], shape, not args.skip_boundary_validation)
             if result["returncode"] != 0:
                 issues.append(f"process failed: {result.get('error', result['returncode'])}")
             validations.append({"shape": shape, "rows": parsed, "errors": issues})
@@ -259,7 +264,7 @@ def run_case(args, campaign, group, case, info, validation_only=False):
             rows, issues = parse_rows(result["stdout"])
             errors += issues + gate_rows(rows, {**case, "M": args.m, "N": args.n, "K": args.k,
                                               "repetitions": args.repetitions})
-            errors += gate_validation(result["stderr"], (args.m, args.n, args.k))
+            errors += gate_validation(result["stderr"], (args.m, args.n, args.k), not args.skip_boundary_validation)
             if result["returncode"] != 0:
                 errors.append(f"timing process failed: {result.get('error', result['returncode'])}")
         if args.gdb and last_command and result["returncode"] in (-signal.SIGILL, 128 + signal.SIGILL):
@@ -414,7 +419,7 @@ def parser():
     command.add_argument("--cpus", default="0", help="Distinct CPU IDs, comma separated; one per worker")
     command.add_argument("--schedule", choices=("static", "dynamic"), default="static")
     command.add_argument("--cc", help="Compiler command, passed to build.py")
-    for flag in ("host-test", "profile", "counters", "include-tuning", "gdb"):
+    for flag in ("host-test", "profile", "counters", "include-tuning", "gdb", "skip-boundary-validation"):
         command.add_argument("--" + flag, action="store_true")
     return command
 

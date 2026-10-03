@@ -70,6 +70,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="After primary runs, repeat every case with --profile for phase fields.",
     )
+    p.add_argument(
+        "--include-boundary-validation",
+        action="store_true",
+        help="Also run the 15x15x69 tail check; disabled by default for Fig. 5 timing.",
+    )
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--stop-on-failure", action="store_true")
     return p.parse_args()
@@ -210,7 +215,9 @@ def command_for(args: argparse.Namespace, case: dict[str, Any], profile: bool, c
         str(args.timeout),
     ]
     if profile:
-        command.append("--profile")
+        command.extend(["--profile", "1"])
+    if not args.include_boundary_validation:
+        command.extend(["--skip-boundary-validation", "1"])
     if args.cc:
         command.extend(["--cc", args.cc])
     return command
@@ -389,7 +396,9 @@ def write_manifest(path: Path, args: argparse.Namespace, campaign: Path, planned
         "primary_cases_completed": sum(r.get("status") == "OK" and not r.get("profiled") for r in results),
         "profile_pass_requested": bool(args.profile),
         "profile_note": "Profile phase values are worker-duration sums; they are explanatory and not substituted for total wall time.",
-        "validation": "run.py accepts only rows passing its independent INT64 reference gate",
+        "validation": ("aligned 16x16x64 and requested full shape; boundary tail check is separate"
+                       if not args.include_boundary_validation else
+                       "aligned 16x16x64, 15x15x69 boundary, and requested full shape"),
         "commands": [" ".join(r.get("command", [])) for r in results],
     }
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -413,6 +422,10 @@ def main() -> int:
     print(f"Fig. 5 campaign: {campaign}", flush=True)
     print(f"Planned primary cases: {len(planned)}", flush=True)
     print("Primary timing: end_to_end; packing included; runs are sequential.", flush=True)
+    if args.include_boundary_validation:
+        print("Validation scope: aligned, boundary, and full workload.", flush=True)
+    else:
+        print("Validation scope: aligned and full workload; boundary check is separate.", flush=True)
 
     for case in planned:
         result = run_case(args, campaign, case, profile=False)

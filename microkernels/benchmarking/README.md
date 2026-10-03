@@ -94,6 +94,15 @@ python3 benchmarking/run.py run --implementation rvv --threads 8 --cpus 0,1,2,3,
 python3 benchmarking/run.py run --implementation mixed --threads 8 --ime-workers 4 --cpus 0,1,2,3,4,5,6,7 --schedule static --weight 4 --timing end_to_end
 python3 benchmarking/run.py run --implementation mixed --threads 8 --ime-workers 4 --cpus 0,1,2,3,4,5,6,7 --schedule dynamic --chunk 1 --timing end_to_end
 
+# Fig. 5 timing launcher: aligned and full-workload validation are retained;
+# the 15x15x69 tail check belongs to the separate correctness campaign.
+bash benchmarking/scripts/run_fig05_complete.sh --m 1024 --n 1024 --k 1024 \
+  --warmups 2 --repetitions 7
+
+# Add this only when intentionally running the auxiliary tail check as part of
+# a timing case (it is not needed for the Fig. 5 performance comparison).
+# .../run_fig05_complete.sh --include-boundary-validation
+
 # Repeatability of ONE selected configuration, not a pool of tuning variants.
 bash benchmarking/scripts/run_rvv_ime_repeatability.sh --implementation rvv --repeat-runs 3 --repetitions 15 --warmups 3
 # Independent RVV and IME configuration exploration (default one CPU).

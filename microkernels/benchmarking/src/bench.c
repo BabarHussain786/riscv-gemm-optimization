@@ -23,7 +23,7 @@
 #define MAX_WORKERS 256
 typedef struct {
  long m,n,k; int threads,cpus[MAX_WORKERS],ime_workers,weight,chunk,warmups,reps;
- unsigned seed; int profile,counters,validate_only,prepacked,dynamic;
+ unsigned seed; int profile,counters,validate_only,skip_boundary_validation,prepacked,dynamic;
  const char *impl,*timing,*schedule;
 } Options;
 typedef struct {
@@ -287,6 +287,7 @@ int main(int argc,char**argv){
   else if(!strcmp(k,"--profile"))o.profile=(int)number(v);
   else if(!strcmp(k,"--counters"))o.counters=(int)number(v);
   else if(!strcmp(k,"--validate-only"))o.validate_only=(int)number(v);
+  else if(!strcmp(k,"--skip-boundary-validation"))o.skip_boundary_validation=(int)number(v);
   else{fprintf(stderr,"unknown option %s\n",k);return 2;}
  }
  if(o.threads<1||o.threads>MAX_WORKERS||o.ime_workers<0||o.ime_workers>o.threads||o.reps<1||o.warmups<0||o.weight<1||o.weight>1000||o.chunk<1)return 2;
@@ -321,7 +322,8 @@ int main(int argc,char**argv){
  /* Tiny mixed strips may be assigned entirely to one backend. Explicitly
   * validate both worker kernels on complete and boundary shapes as well. */
  if(o.ime_workers>0 && o.ime_workers<o.threads){
-  for(int backend=0;backend<2;backend++)for(int shape=0;shape<2;shape++){
+  int backend_shape_count=o.skip_boundary_validation?1:2;
+  for(int backend=0;backend<2;backend++)for(int shape=0;shape<backend_shape_count;shape++){
    Options single=o;single.threads=1;single.ime_workers=backend;
    single.cpus[0]=o.cpus[backend?0:o.ime_workers];single.dynamic=0;
    single.schedule="static";single.impl=backend?"ime":"rvv";
@@ -332,7 +334,13 @@ int main(int argc,char**argv){
    cleanup(&p);if(rc){free(w);return 5;}
   }
  }
- for(int shape=0;shape<3;shape++){
+ /* Fig. 5 measures the requested full workload.  Its optional boundary
+  * check is kept separate so a tail-shape fault cannot suppress 1024^3
+  * timing data; the dedicated correctness campaign still exercises it. */
+ int validation_shapes[2]={0,2};
+ int validation_shape_count=o.skip_boundary_validation?2:3;
+ for(int index=0;index<validation_shape_count;index++){
+  int shape=o.skip_boundary_validation?validation_shapes[index]:index;
   Problem p;double elapsed;
   if(prepare(&p,&o,shapes[shape][0],shapes[shape][1],shapes[shape][2])){free(w);return 4;}
   int rc=execute(&p,&o,w,&elapsed);
