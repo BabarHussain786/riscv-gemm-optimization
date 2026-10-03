@@ -215,9 +215,11 @@ def command_for(args: argparse.Namespace, case: dict[str, Any], profile: bool, c
         str(args.timeout),
     ]
     if profile:
-        command.extend(["--profile", "1"])
+        command.append("--profile")
     if not args.include_boundary_validation:
-        command.extend(["--skip-boundary-validation", "1"])
+        # This is a Python boolean flag; run.py converts it to the C driver's
+        # explicit ``--skip-boundary-validation 1`` argument.
+        command.append("--skip-boundary-validation")
     if args.cc:
         command.extend(["--cc", args.cc])
     return command
