@@ -642,6 +642,10 @@ int main(int argc, char **argv)
      * Because each strip is a different set of C columns, two cores do not
      * write the same C values at the same time.
      */
+    /* Discard warmup phase samples before measuring the timed run. */
+    openmp_input_packing_time_sec = 0.0;
+    openmp_kernel_time_sec = 0.0;
+
     /* Take timestamp immediately before OpenMP workers start computing C tiles. */
     t0 = now_sec();
     {
@@ -698,6 +702,13 @@ int main(int argc, char **argv)
     printf("M=%ld N=%ld K=%ld tile_N=%ld tiles=%ld threads=%d\n",
            M, N, K, tile_n, tiles, actual_threads);
     printf("TIMING_SCOPE=parallel_tiles_including_required_packing\n");
+    printf("PHASE_TIMING_SCOPE=aggregate_worker_time;TOTAL_TIME_SEC=wall_clock\n");
+    printf("INPUT_PACKING_TIME_SEC=%.9f\n", openmp_input_packing_time_sec);
+    printf("KERNEL_TIME_SEC=%.9f\n", openmp_kernel_time_sec);
+    /* The current driver writes the final C layout directly; no separate
+     * output reshape/packing phase exists in this benchmark. */
+    printf("OUTPUT_PACKING_TIME_SEC=0.000000000\n");
+    printf("OUTPUT_PACKING_STATUS=NOT_PRESENT_IN_CURRENT_DRIVER\n");
     printf("INPUT_SEEDS=A:0x%08x;B:0x%08x;C:0x%08x\n",
            INPUT_SEED_A, INPUT_SEED_B, INPUT_SEED_C);
     printf("VALIDATION_METHOD=%s\n", validation_enabled ? VALIDATION_NAME : "DISABLED");
@@ -749,6 +760,7 @@ int main(int argc, char **argv)
 
     /* Step 26: Print the final benchmark values used by the shell scripts. */
     printf("Time: %.9f sec\n", time_sec);
+    printf("TOTAL_TIME_SEC=%.9f\n", time_sec);
     printf("%s: %.6f\n", METRIC_NAME, metric_value);
     printf("MISMATCH_COUNT=%zu\n", mismatch_count);
     printf("MAX_ERROR=%.17g\n", max_error);

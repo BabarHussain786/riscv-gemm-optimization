@@ -17,7 +17,17 @@
  */
 
 #if defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64) || \
-    defined(OMP_KIND_INT8_RVV) || defined(OMP_KIND_INT8_MIXED)
+    defined(OMP_KIND_INT8_RVV) || defined(OMP_KIND_INT8_IME) || \
+    defined(OMP_KIND_INT8_MIXED)
+
+/*
+ * Phase timers are accumulated across the OpenMP workers.  They are
+ * deliberately kept separate from the wall-clock total: workers execute in
+ * parallel, so the phase values represent aggregate worker time while
+ * TOTAL_TIME_SEC represents elapsed end-to-end time.
+ */
+static double openmp_input_packing_time_sec = 0.0;
+static double openmp_kernel_time_sec = 0.0;
 /*
  * ROADMAP BLOCK 1: Required names and tile shapes for mixed INT8 execution
  * -------------------------------------------------------------------------
@@ -70,6 +80,8 @@ static int call_packed_rvv_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
         return 1;
     }
 
+    double pack_t0 = omp_get_wtime();
+
     /* Pack A: keep the rows of one micro-kernel block together for every k. */
     while (m_top < M) {
         BLASLONG rows = packed_block_size(M - m_top, OMP_KERNEL_MR);
@@ -94,17 +106,33 @@ static int call_packed_rvv_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
         n_top += columns;
     }
 
+    {
+        double pack_t1 = omp_get_wtime();
+#pragma omp atomic update
+        openmp_input_packing_time_sec += pack_t1 - pack_t0;
+    }
+
     /* Run the selected RVV micro-kernel on the two packed panels. */
+    {
+        int kernel_return;
+        double kernel_t0 = omp_get_wtime();
 #if defined(OMP_KIND_INT8_MIXED)
-    return RVV_KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
-                             C + n0 * M, M);
+        kernel_return = RVV_KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
+                                          C + n0 * M, M);
 #elif defined(OMP_KIND_FP32) || defined(OMP_KIND_FP64)
-    return KERNEL_SYMBOL(M, N, K, (INPUT_T)1, A_pack, B_pack,
-                         C + n0 * M, M);
+        kernel_return = KERNEL_SYMBOL(M, N, K, (INPUT_T)1, A_pack, B_pack,
+                                      C + n0 * M, M);
 #else
-    return KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
-                         C + n0 * M, M);
+        kernel_return = KERNEL_SYMBOL(M, N, K, 1, A_pack, B_pack,
+                                      C + n0 * M, M);
 #endif
+        {
+            double kernel_t1 = omp_get_wtime();
+#pragma omp atomic update
+            openmp_kernel_time_sec += kernel_t1 - kernel_t0;
+        }
+        return kernel_return;
+    }
 }
 #endif
 
@@ -136,12 +164,30 @@ static int call_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
     (void)A_pack;
     (void)use_rvv_path;
     if (B_tile == NULL) return 1;
-    for (BLASLONG k = 0; k < K; ++k) {
-        for (BLASLONG column = 0; column < N; ++column) {
-            B_tile[k * N + column] = B[k * full_n + n0 + column];
+    {
+        double pack_t0 = omp_get_wtime();
+        for (BLASLONG k = 0; k < K; ++k) {
+            for (BLASLONG column = 0; column < N; ++column) {
+                B_tile[k * N + column] = B[k * full_n + n0 + column];
+            }
+        }
+        {
+            double pack_t1 = omp_get_wtime();
+#pragma omp atomic update
+            openmp_input_packing_time_sec += pack_t1 - pack_t0;
         }
     }
-    return KERNEL_SYMBOL(M, N, K, 1, A, B_tile, C + n0 * M, M);
+    {
+        int kernel_return;
+        double kernel_t0 = omp_get_wtime();
+        kernel_return = KERNEL_SYMBOL(M, N, K, 1, A, B_tile, C + n0 * M, M);
+        {
+            double kernel_t1 = omp_get_wtime();
+#pragma omp atomic update
+            openmp_kernel_time_sec += kernel_t1 - kernel_t0;
+        }
+        return kernel_return;
+    }
 
 #elif defined(OMP_KIND_INT8_MIXED)
     /* Mixed cluster 1 uses the explicit RVV packing and kernel path. */
@@ -152,12 +198,30 @@ static int call_tile_kernel(BLASLONG M, BLASLONG N, BLASLONG K,
 
     /* Mixed cluster 0 copies a compact B strip and calls native IME. */
     if (B_tile == NULL) return 1;
-    for (BLASLONG k = 0; k < K; ++k) {
-        for (BLASLONG column = 0; column < N; ++column) {
-            B_tile[k * N + column] = B[k * full_n + n0 + column];
+    {
+        double pack_t0 = omp_get_wtime();
+        for (BLASLONG k = 0; k < K; ++k) {
+            for (BLASLONG column = 0; column < N; ++column) {
+                B_tile[k * N + column] = B[k * full_n + n0 + column];
+            }
+        }
+        {
+            double pack_t1 = omp_get_wtime();
+#pragma omp atomic update
+            openmp_input_packing_time_sec += pack_t1 - pack_t0;
         }
     }
-    return KERNEL_SYMBOL(M, N, K, 1, A, B_tile, C + n0 * M, M);
+    {
+        int kernel_return;
+        double kernel_t0 = omp_get_wtime();
+        kernel_return = KERNEL_SYMBOL(M, N, K, 1, A, B_tile, C + n0 * M, M);
+        {
+            double kernel_t1 = omp_get_wtime();
+#pragma omp atomic update
+            openmp_kernel_time_sec += kernel_t1 - kernel_t0;
+        }
+        return kernel_return;
+    }
 #else
 #error "Unsupported OpenMP kernel kind"
 #endif
