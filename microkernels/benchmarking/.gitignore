@@ -4,4 +4,7 @@ results/
 build/
 build_*/
 synthetic-analysis-test-*/
+dryrun_fig05*/
+verification/host_build/
+verification/empty_campaign/
 tests/tmp*/
