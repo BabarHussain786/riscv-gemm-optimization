@@ -294,7 +294,7 @@ run_case() {
         VALIDATE_EACH_RUN="0" \
         ENABLE_MF2="${INCLUDE_EXPERIMENTAL_IME}" \
         PERF_STAT="0" \
-        KERNEL_FILTER="$([[ "${mode}" == "k1-rvv" ]] && printf '%s' 'igemm_kernel_8x[48]_zvl256b_lmul1_unroll[1248]' || printf '%s' 'ime_kernel_8x[48]_zvl256b_lmul1_unroll[1248]')" \
+        KERNEL_FILTER="$([[ "${mode}" == "k1-rvv" ]] && printf '%s' 'igemm_kernel_8x[48]_zvl256b_lmul1_unroll[1248]_i8i32' || printf '%s' 'ime_kernel_8x[48]_zvl256b_lmul1_unroll[1248]')" \
         KIND_FILTER="${kind_filter}" \
         bash "${MODULE_SCRIPT}" "${mode}" "${M}" "${N}" "${K}" "${TILE_N}" "${RUNS}"
     ) 2>&1 | tee -a "${LOG}"; then
