@@ -1,6 +1,8 @@
 #ifndef OPENMP_KERNEL_DISPATCH_H
 #define OPENMP_KERNEL_DISPATCH_H
 
+#include <omp.h>
+
 /*
  * KERNEL DISPATCH ROADMAP
  * =======================
