@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+results/
+build/
+build_*/
+synthetic-analysis-test-*/
+tests/tmp*/

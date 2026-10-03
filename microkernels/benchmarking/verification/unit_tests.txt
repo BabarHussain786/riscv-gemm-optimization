@@ -1,0 +1,57 @@
+test_actual_schema_transient_fields_do_not_split_repetitions (test_analysis.AnalysisTests.test_actual_schema_transient_fields_do_not_split_repetitions) ... ok
+test_ambiguous_rvv_baseline_is_not_best_picked (test_analysis.AnalysisTests.test_ambiguous_rvv_baseline_is_not_best_picked) ... ok
+test_build_normalization_preserves_compiler_and_unknown_flags (test_analysis.AnalysisTests.test_build_normalization_preserves_compiler_and_unknown_flags) ... ok
+test_central_comparison_requires_matching_four_plus_four (test_analysis.AnalysisTests.test_central_comparison_requires_matching_four_plus_four) ... ok
+test_configuration_column_absent_is_distinct_from_blank (test_analysis.AnalysisTests.test_configuration_column_absent_is_distinct_from_blank) ... ok
+test_counter_scope_and_hardware_counts_are_configuration (test_analysis.AnalysisTests.test_counter_scope_and_hardware_counts_are_configuration) ... ok
+test_counter_values_aggregate_but_are_excluded_from_primary_speedups (test_analysis.AnalysisTests.test_counter_values_aggregate_but_are_excluded_from_primary_speedups) ... ok
+test_direct_legacy_file_input_refused (test_analysis.AnalysisTests.test_direct_legacy_file_input_refused) ... ok
+test_empty_campaign_never_produces_plots_or_fake_data (test_analysis.AnalysisTests.test_empty_campaign_never_produces_plots_or_fake_data) ... ok
+test_grouping_does_not_pool_configurations (test_analysis.AnalysisTests.test_grouping_does_not_pool_configurations) ... ok
+test_incompatible_scopes_never_yield_speedup (test_analysis.AnalysisTests.test_incompatible_scopes_never_yield_speedup) ... ok
+test_missing_grouping_metadata_rejected (test_analysis.AnalysisTests.test_missing_grouping_metadata_rejected) ... ok
+test_mixed_ime_only_phases_are_preserved_without_wall_shares (test_analysis.AnalysisTests.test_mixed_ime_only_phases_are_preserved_without_wall_shares) ... ok
+test_mixed_matches_rvv_tuning_and_allows_independent_ime (test_analysis.AnalysisTests.test_mixed_matches_rvv_tuning_and_allows_independent_ime) ... ok
+test_multicore_worker_times_have_no_wall_percentages (test_analysis.AnalysisTests.test_multicore_worker_times_have_no_wall_percentages) ... ok
+test_nonadditive_single_thread_has_no_shares (test_analysis.AnalysisTests.test_nonadditive_single_thread_has_no_shares) ... ok
+test_per_run_gops_mean_is_not_gops_of_mean_time (test_analysis.AnalysisTests.test_per_run_gops_mean_is_not_gops_of_mean_time) ... ok
+test_plot_smoke_uses_synthetic_fixtures_and_removes_outputs (test_analysis.AnalysisTests.test_plot_smoke_uses_synthetic_fixtures_and_removes_outputs) ... ok
+test_prepacked_setup_not_counted_in_phase_share (test_analysis.AnalysisTests.test_prepacked_setup_not_counted_in_phase_share) ... ok
+test_profiled_runs_do_not_get_speedups (test_analysis.AnalysisTests.test_profiled_runs_do_not_get_speedups) ... ok
+test_reader_ignores_legacyraw_and_deduplicates (test_analysis.AnalysisTests.test_reader_ignores_legacyraw_and_deduplicates) ... ok
+test_rejected_and_reference_rows (test_analysis.AnalysisTests.test_rejected_and_reference_rows) ... ok
+test_repetition_ids_are_local_to_a_runner_case (test_analysis.AnalysisTests.test_repetition_ids_are_local_to_a_runner_case) ... ok
+test_rvv_fused_fields_stay_null (test_analysis.AnalysisTests.test_rvv_fused_fields_stay_null) ... ok
+test_throughput_uses_declared_total_elapsed (test_analysis.AnalysisTests.test_throughput_uses_declared_total_elapsed) ... ok
+test_unprofiled_phase_numbers_and_missing_active_kernel_are_rejected (test_analysis.AnalysisTests.test_unprofiled_phase_numbers_and_missing_active_kernel_are_rejected) ... ok
+test_worker_and_affinity_consistency (test_analysis.AnalysisTests.test_worker_and_affinity_consistency) ... ok
+test_bad_dimensions_are_rejected (test_host_driver.CompiledHostTests.test_bad_dimensions_are_rejected) ... ok
+test_corruption_aborts_before_timing (test_host_driver.CompiledHostTests.test_corruption_aborts_before_timing) ... ok
+test_end_to_end_matches_runner_schema (test_host_driver.CompiledHostTests.test_end_to_end_matches_runner_schema) ... ok
+test_host_cannot_impersonate_rvv_or_ime (test_host_driver.CompiledHostTests.test_host_cannot_impersonate_rvv_or_ime) ... ok
+test_prepacked_and_profiled_scopes (test_host_driver.CompiledHostTests.test_prepacked_and_profiled_scopes) ... ok
+test_unavailable_counters_are_null (test_host_driver.CompiledHostTests.test_unavailable_counters_are_null) ... ok
+test_validation_only_never_emits_timing (test_host_driver.CompiledHostTests.test_validation_only_never_emits_timing) ... ok
+test_campaign_profiles_both_backends_by_default (test_runner.CaseTests.test_campaign_profiles_both_backends_by_default) ... ok
+test_campaign_uses_same_rvv_and_disjoint_mixed_roles (test_runner.CaseTests.test_campaign_uses_same_rvv_and_disjoint_mixed_roles) ... ok
+test_failed_ime_preflight_stops_campaign_before_primary_cases (test_runner.CaseTests.test_failed_ime_preflight_stops_campaign_before_primary_cases) ... ok
+test_failed_validation_prevents_timing (test_runner.CaseTests.test_failed_validation_prevents_timing) ... ok
+test_host_reference_never_enters_paper_data (test_runner.CaseTests.test_host_reference_never_enters_paper_data) ... ok
+test_ime_preflight_covers_each_intended_cpu_once (test_runner.CaseTests.test_ime_preflight_covers_each_intended_cpu_once) ... ok
+test_interruption_preserves_completed_csv_rows (test_runner.CaseTests.test_interruption_preserves_completed_csv_rows) ... ok
+test_output_directories_are_unique (test_runner.CaseTests.test_output_directories_are_unique) ... ok
+test_preflight_success_has_no_timing_or_accepted_or_failed_rows (test_runner.CaseTests.test_preflight_success_has_no_timing_or_accepted_or_failed_rows) ... ok
+test_process_failure_rejects_even_well_formed_partial_output (test_runner.CaseTests.test_process_failure_rejects_even_well_formed_partial_output) ... ok
+test_success_accepts_exact_rows_after_mandatory_validations (test_runner.CaseTests.test_success_accepts_exact_rows_after_mandatory_validations) ... ok
+test_tuning_is_36_rvv_plus_8_independent_ime (test_runner.CaseTests.test_tuning_is_36_rvv_plus_8_independent_ime) ... ok
+test_unsupported_platform_never_starts_subprocess (test_runner.CaseTests.test_unsupported_platform_never_starts_subprocess) ... ok
+test_bad_second_row_rejects_case (test_runner.GateTests.test_bad_second_row_rejects_case) ... ok
+test_missing_boundary_validation_is_rejected (test_runner.GateTests.test_missing_boundary_validation_is_rejected) ... ok
+test_non_json_stdout_is_rejected_without_synthetic_row (test_runner.GateTests.test_non_json_stdout_is_rejected_without_synthetic_row) ... ok
+test_truncated_and_extra_repetitions_rejected (test_runner.GateTests.test_truncated_and_extra_repetitions_rejected) ... ok
+test_valid_rows (test_runner.GateTests.test_valid_rows) ... ok
+
+----------------------------------------------------------------------
+Ran 52 tests in 2.633s
+
+OK

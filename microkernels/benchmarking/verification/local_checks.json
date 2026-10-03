@@ -1,0 +1,202 @@
+{
+  "hardware": "Windows AMD64; no K1",
+  "paper_measurements_created": 0,
+  "evidence_directory": "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\local-verification-20261001-155302",
+  "checks": [
+    {
+      "label": "unit_tests",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\tests",
+        "-v"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "bash_collect_system_info",
+      "argv": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-n",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\scripts\\collect_system_info.sh"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "bash_diagnose_ime_runtime",
+      "argv": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-n",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\scripts\\diagnose_ime_runtime.sh"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "bash_run_paper_rvv_ime_campaign",
+      "argv": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-n",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\scripts\\run_paper_rvv_ime_campaign.sh"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "bash_run_rvv_ime_repeatability",
+      "argv": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-n",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\scripts\\run_rvv_ime_repeatability.sh"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "bash_run_rvv_ime_tuning",
+      "argv": [
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "-n",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\scripts\\run_rvv_ime_tuning.sh"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "host_campaign_end_to_end",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\run.py",
+        "run",
+        "--project-root",
+        "C:\\Users\\Public\\New project\\finalist\\microkernels",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\v",
+        "--host-test",
+        "--cc",
+        "C:/Users/Babar/Documents/Codex/2026-09-13/create-an-image-of/benchmark-layer-work/compiler/ziglang/zig.exe cc",
+        "--m",
+        "17",
+        "--n",
+        "67",
+        "--k",
+        "69",
+        "--warmups",
+        "1",
+        "--repetitions",
+        "3",
+        "--timing",
+        "end_to_end",
+        "--profile"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "analysis_end_to_end",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\analyze.py",
+        "--input",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\v\\run_20261001T135305753228Z_fb327338a8",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\local-verification-20261001-155302\\analysis_end_to_end"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "host_campaign_prepacked",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\run.py",
+        "run",
+        "--project-root",
+        "C:\\Users\\Public\\New project\\finalist\\microkernels",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\v",
+        "--host-test",
+        "--cc",
+        "C:/Users/Babar/Documents/Codex/2026-09-13/create-an-image-of/benchmark-layer-work/compiler/ziglang/zig.exe cc",
+        "--m",
+        "17",
+        "--n",
+        "67",
+        "--k",
+        "69",
+        "--warmups",
+        "1",
+        "--repetitions",
+        "3",
+        "--timing",
+        "prepacked",
+        "--profile"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "analysis_prepacked",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\analyze.py",
+        "--input",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\v\\run_20261001T135308271604Z_9fa04cf41c",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\local-verification-20261001-155302\\analysis_prepacked"
+      ],
+      "returncode": 0,
+      "expected_returncode": 0
+    },
+    {
+      "label": "host_corruption_rejected",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\run.py",
+        "run",
+        "--project-root",
+        "C:\\Users\\Public\\New project\\finalist\\microkernels",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\v",
+        "--host-test",
+        "--cc",
+        "C:/Users/Babar/Documents/Codex/2026-09-13/create-an-image-of/benchmark-layer-work/compiler/ziglang/zig.exe cc",
+        "--m",
+        "17",
+        "--n",
+        "67",
+        "--k",
+        "69",
+        "--warmups",
+        "1",
+        "--repetitions",
+        "3"
+      ],
+      "returncode": 1,
+      "expected_returncode": 1
+    },
+    {
+      "label": "native_unsupported",
+      "argv": [
+        "C:\\Users\\Babar\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\benchmarking\\run.py",
+        "diagnose",
+        "--project-root",
+        "C:\\Users\\Public\\New project\\finalist\\microkernels",
+        "--output",
+        "C:\\Users\\Babar\\Documents\\Codex\\2026-09-13\\create-an-image-of\\benchmark-layer-work\\local-verification-20261001-155302\\unsupported",
+        "--implementation",
+        "ime"
+      ],
+      "returncode": 1,
+      "expected_returncode": 1
+    }
+  ],
+  "repeated_campaign_directories_distinct": true,
+  "python_syntax": "PASS"
+}
