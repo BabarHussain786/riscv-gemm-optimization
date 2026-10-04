@@ -44,10 +44,10 @@ def build(args):
     if not compiler:
         raise ValueError('Empty compiler command')
     dispatch = root / 'HETEROGENEOUS_RVV_IME_OPENMP_GEMM/src/openmp_kernel_dispatch.h'
-    # The selected IME translation unit already contains its private RVV
-    # fallback helpers.  Linking the sibling ``rvv_fallback.c`` as a second
-    # object exports the same public 8x8 RVV symbol and breaks the RVV build.
-    inputs = list((HERE / 'src').glob('*.[ch]')) + [Path(__file__), rvv, ime, dispatch]
+    # The IME translation unit calls the matching fallback symbol when native
+    # IME execution is unavailable, so the sibling fallback object is part of
+    # the mixed benchmark and must remain linked.
+    inputs = list((HERE / 'src').glob('*.[ch]')) + [Path(__file__), rvv, ime, dispatch, ime.parent/'rvv_fallback.c']
     hashes = {str(p): sha(p) for p in inputs}
     # A common source-universe fingerprint, independent of selected tuning.
     universe = {str(p.relative_to(root)).replace('\\','/'): sha(p)
@@ -74,11 +74,14 @@ def build(args):
         # contain a literal function name.  Rename both forms in this
         # out-of-tree translation unit so the adapter exports one stable
         # callback.  No source file in the kernel tree is edited.  The
-        # selected IME source is self-contained; its sibling rvv_fallback.c
-        # must not be linked because it duplicates the RVV kernel symbol.
+        # selected RVV source is renamed, while the IME fallback retains its
+        # canonical symbol because the IME adapter calls it when required.
         rvv_symbol = rm['kernel']
         sources += [(HERE/'src/rvv_adapter.c', []), (HERE/'src/ime_adapter.c', []),
-                    (rvv, ['-DCNAME=bench_rvv_entry', f'-D{rvv_symbol}=bench_rvv_entry'])]
+                    (rvv, ['-DCNAME=bench_rvv_entry',
+                           f'-D{rvv_symbol}=bench_rvv_entry',
+                           f'-D{rvv_symbol}_i8i32=bench_rvv_entry']),
+                    (ime.parent/'rvv_fallback.c', [])]
     objects, commands = [], []
     for index, (source, extra) in enumerate(sources):
         obj = out/f'unit_{index}.o'
