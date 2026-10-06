@@ -6,10 +6,9 @@ SpacemiT K1 and K3 systems.
 
 ## Start Here: K1
 
-For the complete figure-organized data sweep, use the new
-[paper scripts guide](paper_scripts/README.md). Start with
-`bash paper_scripts/run_all.sh --dry-run`, then run the same launcher on K1
-without `--dry-run`. It saves separate datasets for Figures 1--8.
+For the current experiment definitions and measurement policy, read the
+[experimental roadmap](EXPERIMENTAL_ROADMAP.md).  The individual launchers are
+grouped by experiment under `paper_scripts/`.
 
 Run commands from this folder unless the linked module README says otherwise.
 The K1 source families and launchers remain at their established paths so their
@@ -17,12 +16,12 @@ Makefiles, includes, and benchmark dependencies continue to resolve.
 
 | Task | Main entry point |
 |---|---|
-| Complete single-core campaign | [run_k1_single_core_0_7_1024.sh](run_k1_single_core_0_7_1024.sh) |
-| Standalone INT8, both tile shapes | [run_k1_standalone_int8_8x4_8x8_kernels.sh](run_k1_standalone_int8_8x4_8x8_kernels.sh) |
+| Complete single-core campaign | [run_k1_single_core_0_7_1024.sh](paper_scripts/run_k1_single_core_0_7_1024.sh) |
+| Standalone INT8, both tile shapes | [run_k1_standalone_int8_8x4_8x8_kernels.sh](paper_scripts/run_k1_standalone_int8_8x4_8x8_kernels.sh) |
 | Multicore and heterogeneous experiments | [OpenMP module guide](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/README.md) |
-| Strong scaling | [run_k1_strong_scaling.sh](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_k1_strong_scaling.sh) |
-| Weak scaling | [run_k1_weak_scaling.sh](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_k1_weak_scaling.sh) |
-| Partitioning and scheduling | [run_k1_partitioning_analysis.sh](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_k1_partitioning_analysis.sh) |
+| Strong scaling | [strong-scaling launcher](paper_scripts/strong_scaling_performance/) |
+| Weak scaling | [weak-scaling launcher](paper_scripts/weak_scaling_performance/) |
+| Partitioning and scheduling | [static/dynamic launcher](paper_scripts/static_dynamic_scheduling/) |
 | Kernel tuning | [run_k1_kernel_tuning.sh](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_k1_kernel_tuning.sh) |
 | Plot measured experiments | [plot_k1_paper_experiments.py](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/analysis/plot_k1_paper_experiments.py) |
 | Correctness checks | [Accuracy validation guide](RVV_IME_GEMM_ACCURACY_VALIDATION/README.md) |
@@ -31,8 +30,8 @@ The `run_k1_01_*` launcher is required by the single-core wrapper. The two
 tile-specific standalone launchers are required by the combined INT8 launcher;
 they are supporting scripts, not redundant copies to remove.
 
-Optional K3 work, reference documents, notebooks, and archived local outputs
-are grouped under [extra/](extra/README.md). They are not prerequisites for K1.
+The repository keeps only the reproducibility inputs needed for the paper;
+generated results and supplementary archives are intentionally excluded.
 
 ## Workloads
 
@@ -59,17 +58,10 @@ riscv-rvv-ime-gemm-microkernels/
 +-- IME_NATIVE_KERNELS/
 +-- HETEROGENEOUS_RVV_IME_OPENMP_GEMM/
 +-- RVV_IME_GEMM_ACCURACY_VALIDATION/
-+-- run_k1_single_core_0_7_1024.sh
-+-- run_k1_01_rvv_ime_0_7_1024.sh
-+-- run_k1_standalone_int8_8x4_8x8_kernels.sh
-+-- run_k1_standalone_int8_kernels.sh
-+-- run_k1_standalone_int8_8x8_kernels.sh
-+-- extra/
-    +-- experiments/k3/
-    +-- documents/
-    +-- notebooks/
-    +-- reports/
-    +-- generated/                 local archive; ignored by Git
++-- datasets/
++-- paper_scripts/
++-- benchmarking/
++-- EXPERIMENTAL_ROADMAP.md
 ```
 
 The four baseline folders contain standalone FP32, FP64, and INT8 RVV kernel
@@ -85,7 +77,7 @@ kernel directories use a small local benchmark wrapper backed by the shared
 K1 benchmarks RVV on cores 0-7 and native IME on cores 0-3:
 
 ```bash
-bash run_k1_single_core_0_7_1024.sh
+bash paper_scripts/run_k1_single_core_0_7_1024.sh
 ```
 
 This is the recommended command. It runs FP32 first, followed by FP64, one
@@ -101,14 +93,14 @@ The wrapper calls the full launcher below. Do not run both commands for one
 campaign, because that would repeat the same complete benchmark:
 
 ```bash
-bash run_k1_01_rvv_ime_0_7_1024.sh
+bash paper_scripts/run_k1_01_rvv_ime_0_7_1024.sh
 ```
 
 For a direct INT8 micro-kernel check without OpenMP, use:
 
 ```bash
 M=1024 N=1024 K=1024 RUNS=6 \
-bash run_k1_standalone_int8_kernels.sh
+    bash paper_scripts/run_k1_standalone_int8_kernels.sh
 ```
 
 This command tests the 8x4 RVV and native IME kernels with `LMUL=1` and
@@ -119,11 +111,8 @@ workers are used. When Linux `perf` is available, the table and CSV files also
 include IPC from the measured cycles and instructions; unavailable counters
 are recorded as `NA`.
 
-K3 benchmarks RVV cores 0-7 and the IME domain on cores 8-15:
-
-```bash
-bash extra/experiments/k3/run_k3_rvv_ime_0_15_1024.sh
-```
+K3-only exploratory material is outside this paper-focused K1 tree and is not
+needed for the reported experiments.
 
 ## Heterogeneous OpenMP GEMM
 
@@ -170,11 +159,11 @@ histograms. See `RVV_IME_GEMM_ACCURACY_VALIDATION/README.md` for details.
 
 ## K1 Paper Experiments
 
-Separate strong-scaling, weak-scaling, partitioning, and kernel-tuning scripts
-are provided under `HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/`. They save
-combined measured data under `results/paper_experiments/`; the matching
-analysis program creates PNG and PDF figures without synthetic data. See the
-OpenMP module README for the exact commands and experiment definitions.
+Separate strong-scaling, weak-scaling, scheduling, tuning, end-to-end, and
+validation launchers are grouped under `paper_scripts/`. They save measured
+data under the experiment-specific output directories; the matching analysis
+programs create PNG and PDF figures without synthetic data. Each subdirectory
+contains a short README with the scope and command for that experiment.
 
 ## Requirements
 

@@ -1,0 +1,2004 @@
+EXPERIMENT=k1_strong_scaling
+STARTED=Sat Oct  3 06:31:15 AM CST 2026
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115
+TIMING_SCOPE_EXPECTED=parallel_tiles_including_required_packing
+FAIR_COMPARISON=RVV and IME use identical end-to-end timing boundaries; required input packing is included.
+============================================================
+CONFIGURATION LMUL=1 UNROLL=1 RVV=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32 IME=ime_kernel_8x4_zvl256b_lmul1_unroll1
+============================================================
+CASE series=RVV cores=1 mode=k1-rvv threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063116
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll1/igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32.c
+    run 1: OK GOPS=0.954232 time=2.250484627 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.03655511024 cache_miss_rate=NA% cycles=178888792632 instructions=6539299535
+    run 2: OK GOPS=0.959949 time=2.237080336 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.329137623 cache_miss_rate=NA% cycles=7269529092 instructions=2392675526
+    run 3: OK GOPS=0.960088 time=2.236758210 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3299152663 cache_miss_rate=NA% cycles=7239242444 instructions=2388336599
+    run 4: OK GOPS=0.955654 time=2.247134585 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3285245963 cache_miss_rate=NA% cycles=7284114210 instructions=2393010680
+    run 5: OK GOPS=0.959658 time=2.237758253 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3296232579 cache_miss_rate=NA% cycles=7262566511 instructions=2393910834
+    run 6: OK GOPS=0.954823 time=2.249091376 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.32873482 cache_miss_rate=NA% cycles=7281178897 instructions=2393577034
+    run 7: OK GOPS=0.955805 time=2.246778920 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3291294221 cache_miss_rate=NA% cycles=7268282768 instructions=2392205707
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063116/openmp_raw_k1-rvv_1024_runs7_20261003_063116.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063116/openmp_summary_k1-rvv_1024_runs7_20261003_063116.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063116/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=2 mode=k1-rvv threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063355
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll1/igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32.c
+    run 1: OK GOPS=1.878012 time=1.143487792 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.03234311282 cache_miss_rate=NA% cycles=201812208407 instructions=6527235024
+    run 2: OK GOPS=1.895085 time=1.133186083 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3248699771 cache_miss_rate=NA% cycles=7370789774 instructions=2394548305
+    run 3: OK GOPS=1.884784 time=1.139379207 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3257897372 cache_miss_rate=NA% cycles=7326898234 instructions=2387028250
+    run 4: OK GOPS=1.898184 time=1.131336041 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.32563019 cache_miss_rate=NA% cycles=7345818867 instructions=2392020393
+    run 5: OK GOPS=1.895068 time=1.133195836 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.32581508 cache_miss_rate=NA% cycles=7338993450 instructions=2391154738
+    run 6: OK GOPS=1.891268 time=1.135472834 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.325723382 cache_miss_rate=NA% cycles=7338409101 instructions=2390291431
+    run 7: OK GOPS=1.878695 time=1.143071834 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3230471111 cache_miss_rate=NA% cycles=7432265891 instructions=2400972025
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063355/openmp_raw_k1-rvv_1024_runs7_20261003_063355.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063355/openmp_summary_k1-rvv_1024_runs7_20261003_063355.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063355/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=4 mode=k1-rvv threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063536
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll1/igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32.c
+    run 1: OK GOPS=3.538931 time=0.606817003 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.02385959603 cache_miss_rate=NA% cycles=271131071704 instructions=6469077841
+    run 2: OK GOPS=3.502876 time=0.613063041 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3135720355 cache_miss_rate=NA% cycles=7690658545 instructions=2411575454
+    run 3: OK GOPS=3.561684 time=0.602940500 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3129805209 cache_miss_rate=NA% cycles=7688575386 instructions=2406374329
+    run 4: OK GOPS=3.564953 time=0.602387708 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3139648583 cache_miss_rate=NA% cycles=7690352025 instructions=2414500284
+    run 5: OK GOPS=3.573201 time=0.600997083 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3110173799 cache_miss_rate=NA% cycles=7709491594 instructions=2397785876
+    run 6: OK GOPS=3.554150 time=0.604218669 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3089299362 cache_miss_rate=NA% cycles=7783497866 instructions=2404555499
+    run 7: OK GOPS=3.569108 time=0.601686414 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.311573099 cache_miss_rate=NA% cycles=7716158027 instructions=2404147269
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063536/openmp_raw_k1-rvv_1024_runs7_20261003_063536.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063536/openmp_summary_k1-rvv_1024_runs7_20261003_063536.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063536/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=8 mode=k1-rvv threads=8 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063648
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=8 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll1/igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32.c
+    run 1: OK GOPS=6.791202 time=0.316215541 threads=8 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.02620518552 cache_miss_rate=NA% cycles=248562906413 instructions=6513637077
+    run 2: OK GOPS=6.815254 time=0.315099582 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.3038266336 cache_miss_rate=NA% cycles=7993336409 instructions=2428588492
+    run 3: OK GOPS=6.790263 time=0.316259291 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.3050975716 cache_miss_rate=NA% cycles=8080184845 instructions=2465244774
+    run 4: OK GOPS=6.756642 time=0.317832999 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.300812238 cache_miss_rate=NA% cycles=8098954645 instructions=2436264672
+    run 5: OK GOPS=6.835712 time=0.314156540 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.3011504441 cache_miss_rate=NA% cycles=8032767524 instructions=2419071507
+    run 6: OK GOPS=6.893343 time=0.311530083 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.3012969402 cache_miss_rate=NA% cycles=7994291750 instructions=2408655643
+    run 7: OK GOPS=6.754320 time=0.317942251 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.3070923094 cache_miss_rate=NA% cycles=7957767271 instructions=2443769129
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll1_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063648/openmp_raw_k1-rvv_1024_runs7_20261003_063648.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063648/openmp_summary_k1-rvv_1024_runs7_20261003_063648.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_063648/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=IME cores=1 mode=k1-ime threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll1
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063733
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll1 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll1
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll1/ime_kernel_8x4_zvl256b_lmul1_unroll1.c
+    run 1: OK GOPS=5.736475 time=0.374355957 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.06719139132 cache_miss_rate=NA% cycles=64294473919 instructions=4320035157
+    run 2: OK GOPS=4.667270 time=0.460115541 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3886006291 cache_miss_rate=NA% cycles=1517768796 instructions=589805909
+    run 3: OK GOPS=9.635407 time=0.222874206 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.7027929195 cache_miss_rate=NA% cycles=838268653 instructions=589129274
+    run 4: OK GOPS=5.698781 time=0.376832128 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4776482808 cache_miss_rate=NA% cycles=1228376495 instructions=586731921
+    run 5: OK GOPS=6.874783 time=0.312371124 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4993404552 cache_miss_rate=NA% cycles=1184578329 instructions=591507882
+    run 6: OK GOPS=6.269334 time=0.342537791 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.5596213188 cache_miss_rate=NA% cycles=1051989746 instructions=588715889
+    run 7: OK GOPS=5.808536 time=0.369711667 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4606764605 cache_miss_rate=NA% cycles=1271347816 instructions=585680012
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063733/openmp_raw_k1-ime_1024_runs7_20261003_063733.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063733/openmp_summary_k1-ime_1024_runs7_20261003_063733.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063733/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=2 mode=k1-ime threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll1
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063831
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll1 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll1
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll1/ime_kernel_8x4_zvl256b_lmul1_unroll1.c
+    run 1: OK GOPS=12.170836 time=0.176445045 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.02394770504 cache_miss_rate=NA% cycles=193054387613 instructions=4623209532
+    run 2: OK GOPS=9.816943 time=0.218752790 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4048072533 cache_miss_rate=NA% cycles=1449163369 instructions=586631843
+    run 3: OK GOPS=9.600367 time=0.223687667 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4109930524 cache_miss_rate=NA% cycles=1467284606 instructions=603043779
+    run 4: OK GOPS=12.495971 time=0.171854082 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4967038558 cache_miss_rate=NA% cycles=1199744838 instructions=595917887
+    run 5: OK GOPS=12.554618 time=0.171051290 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5240808944 cache_miss_rate=NA% cycles=1138596830 instructions=596716845
+    run 6: OK GOPS=10.077273 time=0.213101666 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.428006254 cache_miss_rate=NA% cycles=1402977579 instructions=600483178
+    run 7: OK GOPS=12.975265 time=0.165505961 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5047608466 cache_miss_rate=NA% cycles=1161685517 instructions=586373365
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063831/openmp_raw_k1-ime_1024_runs7_20261003_063831.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063831/openmp_summary_k1-ime_1024_runs7_20261003_063831.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063831/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=4 mode=k1-ime threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll1
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063951
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll1 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll1
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=1
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll1/ime_kernel_8x4_zvl256b_lmul1_unroll1.c
+    run 1: OK GOPS=16.074410 time=0.133596420 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.01810824328 cache_miss_rate=NA% cycles=262393826685 instructions=4751491250
+    run 2: OK GOPS=15.844388 time=0.135535918 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3392883891 cache_miss_rate=NA% cycles=1772279728 instructions=601313934
+    run 3: OK GOPS=14.572310 time=0.147367418 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3279587312 cache_miss_rate=NA% cycles=1878590891 instructions=616100285
+    run 4: OK GOPS=14.282557 time=0.150357082 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3219401278 cache_miss_rate=NA% cycles=1858400890 instructions=598293820
+    run 5: OK GOPS=15.270420 time=0.140630290 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3313079672 cache_miss_rate=NA% cycles=1833582262 instructions=607480412
+    run 6: OK GOPS=15.434366 time=0.139136497 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3254469068 cache_miss_rate=NA% cycles=1818883817 instructions=591950112
+    run 7: OK GOPS=15.556079 time=0.138047874 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3328294605 cache_miss_rate=NA% cycles=1850789756 instructions=615997356
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063951/openmp_raw_k1-ime_1024_runs7_20261003_063951.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063951/openmp_summary_k1-ime_1024_runs7_20261003_063951.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_063951/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CONFIGURATION LMUL=1 UNROLL=2 RVV=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32 IME=ime_kernel_8x4_zvl256b_lmul1_unroll2
+============================================================
+CASE series=RVV cores=1 mode=k1-rvv threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064051
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll2/igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32.c
+    run 1: OK GOPS=0.622795 time=3.448138628 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.04126338803 cache_miss_rate=NA% cycles=180861440333 instructions=7462955793
+    run 2: OK GOPS=0.622421 time=3.450212877 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.30059761 cache_miss_rate=NA% cycles=11140552503 instructions=3348823456
+    run 3: OK GOPS=0.624586 time=3.438248754 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3012062182 cache_miss_rate=NA% cycles=11105397920 instructions=3345014909
+    run 4: OK GOPS=0.622592 time=3.449265834 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3002332694 cache_miss_rate=NA% cycles=11133199178 instructions=3342556788
+    run 5: OK GOPS=0.621628 time=3.454611335 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3003073376 cache_miss_rate=NA% cycles=11156913662 instructions=3350503038
+    run 6: OK GOPS=0.621339 time=3.456217792 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.2996541758 cache_miss_rate=NA% cycles=11162632851 instructions=3344929547
+    run 7: OK GOPS=0.623288 time=3.445411082 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3010428513 cache_miss_rate=NA% cycles=11122458891 instructions=3348336738
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064051/openmp_raw_k1-rvv_1024_runs7_20261003_064051.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064051/openmp_summary_k1-rvv_1024_runs7_20261003_064051.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064051/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=2 mode=k1-rvv threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064346
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll2/igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32.c
+    run 1: OK GOPS=1.230588 time=1.745087296 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.03592949503 cache_miss_rate=NA% cycles=208601645665 instructions=7494951791
+    run 2: OK GOPS=1.229289 time=1.746931124 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2976803401 cache_miss_rate=NA% cycles=11256413411 instructions=3350812973
+    run 3: OK GOPS=1.233928 time=1.740364041 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2985983294 cache_miss_rate=NA% cycles=11226322047 instructions=3352161009
+    run 4: OK GOPS=1.234253 time=1.739904918 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2978909548 cache_miss_rate=NA% cycles=11227657842 instructions=3344617715
+    run 5: OK GOPS=1.235603 time=1.738005251 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2988795704 cache_miss_rate=NA% cycles=11209361122 instructions=3350249037
+    run 6: OK GOPS=1.234654 time=1.739340417 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2984595121 cache_miss_rate=NA% cycles=11216091165 instructions=3347549097
+    run 7: OK GOPS=1.231213 time=1.744200960 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2980241415 cache_miss_rate=NA% cycles=11253425679 instructions=3353792527
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064346/openmp_raw_k1-rvv_1024_runs7_20261003_064346.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064346/openmp_summary_k1-rvv_1024_runs7_20261003_064346.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064346/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=4 mode=k1-rvv threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064536
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll2/igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32.c
+    run 1: OK GOPS=2.379709 time=0.902414333 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.02687295495 cache_miss_rate=NA% cycles=276985727382 instructions=7443424973
+    run 2: OK GOPS=2.374808 time=0.904276583 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2902827366 cache_miss_rate=NA% cycles=11574118105 instructions=3359766677
+    run 3: OK GOPS=2.376152 time=0.903765168 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2882864436 cache_miss_rate=NA% cycles=11597242983 instructions=3343327935
+    run 4: OK GOPS=2.344444 time=0.915988456 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2912174823 cache_miss_rate=NA% cycles=11595651966 instructions=3376856571
+    run 5: OK GOPS=2.358483 time=0.910536084 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2869729523 cache_miss_rate=NA% cycles=11556432736 instructions=3316383620
+    run 6: OK GOPS=2.356967 time=0.911121540 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.288516075 cache_miss_rate=NA% cycles=11550869956 instructions=3332611663
+    run 7: OK GOPS=2.402363 time=0.893904872 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2948327917 cache_miss_rate=NA% cycles=11502345840 instructions=3391268735
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064536/openmp_raw_k1-rvv_1024_runs7_20261003_064536.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064536/openmp_summary_k1-rvv_1024_runs7_20261003_064536.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064536/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=8 mode=k1-rvv threads=8 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064652
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=8 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll2/igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32.c
+    run 1: OK GOPS=4.566116 time=0.470308624 threads=8 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.02431270974 cache_miss_rate=NA% cycles=314159035161 instructions=7638057434
+    run 2: OK GOPS=4.561052 time=0.470830791 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2816936163 cache_miss_rate=NA% cycles=11957093007 instructions=3368236770
+    run 3: OK GOPS=4.578167 time=0.469070625 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.284230625 cache_miss_rate=NA% cycles=11926631589 instructions=3389913951
+    run 4: OK GOPS=4.593078 time=0.467547834 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2863981056 cache_miss_rate=NA% cycles=11914866447 instructions=3412395179
+    run 5: OK GOPS=4.570688 time=0.469838206 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2836639761 cache_miss_rate=NA% cycles=11959165180 instructions=3392384346
+    run 6: OK GOPS=4.594971 time=0.467355169 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2831687725 cache_miss_rate=NA% cycles=11949612299 instructions=3383757046
+    run 7: OK GOPS=4.554414 time=0.471517000 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2857740031 cache_miss_rate=NA% cycles=11878747958 instructions=3394637356
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll2_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064652/openmp_raw_k1-rvv_1024_runs7_20261003_064652.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064652/openmp_summary_k1-rvv_1024_runs7_20261003_064652.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_064652/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=IME cores=1 mode=k1-ime threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll2
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064746
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll2 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll2
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll2/ime_kernel_8x4_zvl256b_lmul1_unroll2.c
+    run 1: OK GOPS=7.895362 time=0.271993041 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.02778551887 cache_miss_rate=NA% cycles=170036759300 instructions=4724559584
+    run 2: OK GOPS=9.103186 time=0.235904627 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6649741454 cache_miss_rate=NA% cycles=867039818 instructions=576559062
+    run 3: OK GOPS=6.270706 time=0.342462793 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4741271353 cache_miss_rate=NA% cycles=1217593698 instructions=577294212
+    run 4: OK GOPS=6.674206 time=0.321758665 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4612243606 cache_miss_rate=NA% cycles=1251247144 instructions=577105664
+    run 5: OK GOPS=8.827150 time=0.243281666 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6595169671 cache_miss_rate=NA% cycles=873501180 instructions=576088849
+    run 6: OK GOPS=8.870839 time=0.242083501 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6200810556 cache_miss_rate=NA% cycles=930026060 instructions=576691541
+    run 7: OK GOPS=5.846683 time=0.367299456 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4439697877 cache_miss_rate=NA% cycles=1308614996 instructions=580985522
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064746/openmp_raw_k1-ime_1024_runs7_20261003_064746.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064746/openmp_summary_k1-ime_1024_runs7_20261003_064746.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064746/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=2 mode=k1-ime threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll2
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064950
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll2 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll2
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll2/ime_kernel_8x4_zvl256b_lmul1_unroll2.c
+    run 1: OK GOPS=13.352977 time=0.160824336 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.02438448538 cache_miss_rate=NA% cycles=189805099155 instructions=4628299666
+    run 2: OK GOPS=9.436212 time=0.227579001 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3853147413 cache_miss_rate=NA% cycles=1516199658 instructions=584214079
+    run 3: OK GOPS=11.974966 time=0.179331083 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4832532267 cache_miss_rate=NA% cycles=1200399097 instructions=580096737
+    run 4: OK GOPS=9.304055 time=0.230811585 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3948073738 cache_miss_rate=NA% cycles=1463516774 instructions=577807214
+    run 5: OK GOPS=10.345635 time=0.207573876 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4064569282 cache_miss_rate=NA% cycles=1443913129 instructions=586888495
+    run 6: OK GOPS=13.532205 time=0.158694290 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5113741973 cache_miss_rate=NA% cycles=1144744780 instructions=585392943
+    run 7: OK GOPS=9.788958 time=0.219378166 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.406018606 cache_miss_rate=NA% cycles=1446999579 instructions=587508752
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064950/openmp_raw_k1-ime_1024_runs7_20261003_064950.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064950/openmp_summary_k1-ime_1024_runs7_20261003_064950.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_064950/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=4 mode=k1-ime threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll2
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065109
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll2 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll2
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=2
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll2/ime_kernel_8x4_zvl256b_lmul1_unroll2.c
+    run 1: OK GOPS=14.879129 time=0.144328583 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.02267426446 cache_miss_rate=NA% cycles=200784737044 instructions=4552646228
+    run 2: OK GOPS=15.740813 time=0.136427749 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3240826771 cache_miss_rate=NA% cycles=1775149984 instructions=575295359
+    run 3: OK GOPS=15.202325 time=0.141260210 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.303565467 cache_miss_rate=NA% cycles=1868363034 instructions=567170497
+    run 4: OK GOPS=16.805137 time=0.127787333 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3508575463 cache_miss_rate=NA% cycles=1779084596 instructions=624205256
+    run 5: OK GOPS=14.656194 time=0.146523960 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3207314288 cache_miss_rate=NA% cycles=1892498962 instructions=606983896
+    run 6: OK GOPS=16.031824 time=0.133951295 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2948138731 cache_miss_rate=NA% cycles=1745305927 instructions=514540400
+    run 7: OK GOPS=14.560075 time=0.147491250 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3240692283 cache_miss_rate=NA% cycles=1849916850 instructions=599501126
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065109/openmp_raw_k1-ime_1024_runs7_20261003_065109.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065109/openmp_summary_k1-ime_1024_runs7_20261003_065109.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065109/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CONFIGURATION LMUL=1 UNROLL=4 RVV=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32 IME=ime_kernel_8x4_zvl256b_lmul1_unroll4
+============================================================
+CASE series=RVV cores=1 mode=k1-rvv threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065157
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll4/igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32.c
+    run 1: OK GOPS=0.606451 time=3.541069418 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.04229645527 cache_miss_rate=NA% cycles=182223700129 instructions=7707416582
+    run 2: OK GOPS=0.606847 time=3.538756836 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3093117933 cache_miss_rate=NA% cycles=11433984156 instructions=3536666144
+    run 3: OK GOPS=0.606475 time=3.540927544 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3087109498 cache_miss_rate=NA% cycles=11439934877 instructions=3531633162
+    run 4: OK GOPS=0.606072 time=3.543279544 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3086238406 cache_miss_rate=NA% cycles=11450697291 instructions=3533958175
+    run 5: OK GOPS=0.606603 time=3.540181879 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3089494494 cache_miss_rate=NA% cycles=11431339566 instructions=3531706065
+    run 6: OK GOPS=0.606084 time=3.543210089 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3088094899 cache_miss_rate=NA% cycles=11443097183 instructions=3533737004
+    run 7: OK GOPS=0.605368 time=3.547402877 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.3093630649 cache_miss_rate=NA% cycles=11588362826 instructions=3585011441
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065157/openmp_raw_k1-rvv_1024_runs7_20261003_065157.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065157/openmp_summary_k1-rvv_1024_runs7_20261003_065157.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065157/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=2 mode=k1-rvv threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065455
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll4/igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32.c
+    run 1: OK GOPS=1.199734 time=1.789967127 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.06341723518 cache_miss_rate=NA% cycles=114755744332 instructions=7277492026
+    run 2: OK GOPS=1.201300 time=1.787633292 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3064587272 cache_miss_rate=NA% cycles=11519953987 instructions=3530390436
+    run 3: OK GOPS=1.195276 time=1.796642419 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3001983793 cache_miss_rate=NA% cycles=11565605635 instructions=3471976067
+    run 4: OK GOPS=1.197399 time=1.793457378 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3056844434 cache_miss_rate=NA% cycles=11535182147 instructions=3526125734
+    run 5: OK GOPS=1.202861 time=1.785313252 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.309207558 cache_miss_rate=NA% cycles=11517650345 instructions=3561344537
+    run 6: OK GOPS=1.198934 time=1.791160915 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3078279476 cache_miss_rate=NA% cycles=11534631334 instructions=3550681890
+    run 7: OK GOPS=1.201450 time=1.787410460 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3064593225 cache_miss_rate=NA% cycles=11519300994 instructions=3530197178
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065455/openmp_raw_k1-rvv_1024_runs7_20261003_065455.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065455/openmp_summary_k1-rvv_1024_runs7_20261003_065455.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065455/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=4 mode=k1-rvv threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065614
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll4/igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32.c
+    run 1: OK GOPS=2.334039 time=0.920071833 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.03535598349 cache_miss_rate=NA% cycles=212877008430 instructions=7526475996
+    run 2: OK GOPS=2.340375 time=0.917581126 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2988643415 cache_miss_rate=NA% cycles=11817335210 instructions=3531780106
+    run 3: OK GOPS=2.316067 time=0.927211542 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2969271857 cache_miss_rate=NA% cycles=11884134939 instructions=3528722742
+    run 4: OK GOPS=2.324958 time=0.923665583 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2983611138 cache_miss_rate=NA% cycles=11872347682 instructions=3542246878
+    run 5: OK GOPS=2.314209 time=0.927955959 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2972285248 cache_miss_rate=NA% cycles=11907219712 instructions=3539165349
+    run 6: OK GOPS=2.304573 time=0.931835666 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2998271177 cache_miss_rate=NA% cycles=11807193024 instructions=3540116652
+    run 7: OK GOPS=2.316707 time=0.926955417 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.297524013 cache_miss_rate=NA% cycles=11894372596 instructions=3538861467
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065614/openmp_raw_k1-rvv_1024_runs7_20261003_065614.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065614/openmp_summary_k1-rvv_1024_runs7_20261003_065614.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065614/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=8 mode=k1-rvv threads=8 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065721
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=8 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll4/igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32.c
+    run 1: OK GOPS=4.489834 time=0.478299085 threads=8 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.02459305684 cache_miss_rate=NA% cycles=314683495532 instructions=7739029092
+    run 2: OK GOPS=4.488081 time=0.478485916 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.293503656 cache_miss_rate=NA% cycles=12213228852 instructions=3584627320
+    run 3: OK GOPS=4.510212 time=0.476138085 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2930014383 cache_miss_rate=NA% cycles=12200400183 instructions=3574734802
+    run 4: OK GOPS=4.451371 time=0.482432000 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2932102073 cache_miss_rate=NA% cycles=12186554750 instructions=3573222244
+    run 5: OK GOPS=4.424104 time=0.485405374 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2940879668 cache_miss_rate=NA% cycles=12169942979 instructions=3579033787
+    run 6: OK GOPS=4.486710 time=0.478632167 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.293464351 cache_miss_rate=NA% cycles=12228613129 instructions=3588662015
+    run 7: OK GOPS=4.463291 time=0.481143501 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2933866203 cache_miss_rate=NA% cycles=12243866268 instructions=3592186544
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll4_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065721/openmp_raw_k1-rvv_1024_runs7_20261003_065721.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065721/openmp_summary_k1-rvv_1024_runs7_20261003_065721.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_065721/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=IME cores=1 mode=k1-ime threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065814
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+    run 1: OK GOPS=7.546776 time=0.284556415 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.02830442616 cache_miss_rate=NA% cycles=168675152787 instructions=4774253407
+    run 2: OK GOPS=6.761387 time=0.317609917 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.497748559 cache_miss_rate=NA% cycles=1145936107 instructions=570388046
+    run 3: OK GOPS=9.416573 time=0.228053626 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6785439828 cache_miss_rate=NA% cycles=843563466 instructions=572394914
+    run 4: OK GOPS=8.478683 time=0.253280334 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.614430325 cache_miss_rate=NA% cycles=924925810 instructions=568302466
+    run 5: OK GOPS=5.273498 time=0.407221876 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4305402251 cache_miss_rate=NA% cycles=1330601850 instructions=572877620
+    run 6: OK GOPS=8.349358 time=0.257203460 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6257168578 cache_miss_rate=NA% cycles=915569841 instructions=572887484
+    run 7: OK GOPS=9.362085 time=0.229380917 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6516198429 cache_miss_rate=NA% cycles=869727827 instructions=566731910
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065814/openmp_raw_k1-ime_1024_runs7_20261003_065814.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065814/openmp_summary_k1-ime_1024_runs7_20261003_065814.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_065814/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=2 mode=k1-ime threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070018
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+    run 1: OK GOPS=12.287033 time=0.174776420 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.04224174126 cache_miss_rate=NA% cycles=105071637105 instructions=4438408908
+    run 2: OK GOPS=9.815098 time=0.218793917 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4094591821 cache_miss_rate=NA% cycles=1398044440 instructions=572442133
+    run 3: OK GOPS=10.814875 time=0.198567584 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4259688767 cache_miss_rate=NA% cycles=1339785377 instructions=570706872
+    run 4: OK GOPS=12.353119 time=0.173841417 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4794108515 cache_miss_rate=NA% cycles=1198358227 instructions=574505938
+    run 5: OK GOPS=12.932201 time=0.166057084 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5088175319 cache_miss_rate=NA% cycles=1136322280 instructions=578180698
+    run 6: OK GOPS=12.783348 time=0.167990707 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4754775828 cache_miss_rate=NA% cycles=1212663530 instructions=576594324
+    run 7: OK GOPS=9.380537 time=0.228929706 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3890374654 cache_miss_rate=NA% cycles=1499274679 instructions=583274021
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070018/openmp_raw_k1-ime_1024_runs7_20261003_070018.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070018/openmp_summary_k1-ime_1024_runs7_20261003_070018.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070018/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=4 mode=k1-ime threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070108
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+    run 1: OK GOPS=14.670621 time=0.146379873 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.02203860755 cache_miss_rate=NA% cycles=204249737582 instructions=4501379808
+    run 2: OK GOPS=16.472812 time=0.130365331 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3391899424 cache_miss_rate=NA% cycles=1795626205 instructions=609058349
+    run 3: OK GOPS=14.552305 time=0.147569999 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.319084538 cache_miss_rate=NA% cycles=1832930830 instructions=584859887
+    run 4: OK GOPS=16.117339 time=0.133240584 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3385291473 cache_miss_rate=NA% cycles=1793880361 instructions=607280789
+    run 5: OK GOPS=15.721477 time=0.136595540 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3220974124 cache_miss_rate=NA% cycles=1767435245 instructions=569286319
+    run 6: OK GOPS=15.204716 time=0.141238000 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3235676782 cache_miss_rate=NA% cycles=1852257495 instructions=599330657
+    run 7: OK GOPS=13.709468 time=0.156642377 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3393259735 cache_miss_rate=NA% cycles=1863178794 instructions=632224958
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070108/openmp_raw_k1-ime_1024_runs7_20261003_070108.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070108/openmp_summary_k1-ime_1024_runs7_20261003_070108.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070108/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CONFIGURATION LMUL=1 UNROLL=8 RVV=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32 IME=ime_kernel_8x4_zvl256b_lmul1_unroll8
+============================================================
+CASE series=RVV cores=1 mode=k1-rvv threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070156
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll8/igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32.c
+    run 1: OK GOPS=0.661737 time=3.245221876 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.04155626811 cache_miss_rate=NA% cycles=173403282385 instructions=7205993294
+    run 2: OK GOPS=0.664647 time=3.231014624 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.2996738468 cache_miss_rate=NA% cycles=10449975638 instructions=3131584398
+    run 3: OK GOPS=0.663122 time=3.238445170 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.2992027734 cache_miss_rate=NA% cycles=10471050336 instructions=3132967301
+    run 4: OK GOPS=0.663452 time=3.236835375 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.299455042 cache_miss_rate=NA% cycles=10460586831 instructions=3132475469
+    run 5: OK GOPS=0.662568 time=3.241151378 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.298940639 cache_miss_rate=NA% cycles=10488862915 instructions=3135547382
+    run 6: OK GOPS=0.663895 time=3.234671585 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.2994325682 cache_miss_rate=NA% cycles=10456283735 instructions=3130951893
+    run 7: OK GOPS=0.665237 time=3.228149667 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.2999721445 cache_miss_rate=NA% cycles=10440119031 instructions=3131744895
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070156/openmp_raw_k1-rvv_1024_runs7_20261003_070156.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070156/openmp_summary_k1-rvv_1024_runs7_20261003_070156.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070156/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=2 mode=k1-rvv threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070446
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll8/igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32.c
+    run 1: OK GOPS=1.308805 time=1.640797168 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.06082383208 cache_miss_rate=NA% cycles=113708374169 instructions=6916179056
+    run 2: OK GOPS=1.303747 time=1.647163253 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2954835776 cache_miss_rate=NA% cycles=10586584615 instructions=3128161897
+    run 3: OK GOPS=1.312271 time=1.636463083 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2945471823 cache_miss_rate=NA% cycles=10606663261 instructions=3124162777
+    run 4: OK GOPS=1.315041 time=1.633016627 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2963335017 cache_miss_rate=NA% cycles=10558985979 instructions=3128981290
+    run 5: OK GOPS=1.310375 time=1.638831709 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2961088469 cache_miss_rate=NA% cycles=10589070394 instructions=3135517424
+    run 6: OK GOPS=1.309205 time=1.640295669 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2966311828 cache_miss_rate=NA% cycles=10566857536 instructions=3134459449
+    run 7: OK GOPS=1.311332 time=1.637634750 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.2957512405 cache_miss_rate=NA% cycles=10549501406 instructions=3120028128
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070446/openmp_raw_k1-rvv_1024_runs7_20261003_070446.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070446/openmp_summary_k1-rvv_1024_runs7_20261003_070446.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070446/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=4 mode=k1-rvv threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070603
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll8/igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32.c
+    run 1: OK GOPS=2.543552 time=0.844285417 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.02650749946 cache_miss_rate=NA% cycles=274355454870 instructions=7272477071
+    run 2: OK GOPS=2.518787 time=0.852586333 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2878099806 cache_miss_rate=NA% cycles=10911058748 instructions=3140311607
+    run 3: OK GOPS=2.523029 time=0.851153083 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.28827119 cache_miss_rate=NA% cycles=10934164870 instructions=3152004719
+    run 4: OK GOPS=2.529365 time=0.849020876 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2884409772 cache_miss_rate=NA% cycles=10862426138 instructions=3133168810
+    run 5: OK GOPS=2.546010 time=0.843470294 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2881269694 cache_miss_rate=NA% cycles=10867647012 instructions=3131262198
+    run 6: OK GOPS=2.522676 time=0.851272166 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2869184977 cache_miss_rate=NA% cycles=10930705767 instructions=3136221678
+    run 7: OK GOPS=2.528220 time=0.849405419 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.2877023879 cache_miss_rate=NA% cycles=10893168216 instructions=3133990507
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070603/openmp_raw_k1-rvv_1024_runs7_20261003_070603.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070603/openmp_summary_k1-rvv_1024_runs7_20261003_070603.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070603/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=RVV cores=8 mode=k1-rvv threads=8 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070721
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=8 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32 KIND_FILTER=INT8_RVV PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32
+  MODE: K1 all-core RVV OpenMP baseline
+  BASELINE: GEMM_RVV_FP32_INT8_8x4_Baseline
+  FAMILY: RVV_IGEMM_INT8_I8I32_8x4
+  PATH: INT8 RVV widening GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-7 execute RVV kernels
+  INPUT_CONTRACT: CANONICAL_FULL_MATRIX
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/GEMM_RVV_FP32_INT8_8x4_Baseline/RVV_IGEMM_INT8_I8I32_8x4/igemm_kernel_8x4_zvl256b_lmul1_unroll8/igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32.c
+    run 1: OK GOPS=4.860581 time=0.441816211 threads=8 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.02349268465 cache_miss_rate=NA% cycles=315389695970 instructions=7409350669
+    run 2: OK GOPS=4.779971 time=0.449267123 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2798579702 cache_miss_rate=NA% cycles=11321780308 instructions=3168490456
+    run 3: OK GOPS=4.704821 time=0.456443205 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2820016944 cache_miss_rate=NA% cycles=11268465600 instructions=3177726392
+    run 4: OK GOPS=4.813357 time=0.446150959 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2812303445 cache_miss_rate=NA% cycles=11325841249 instructions=3185170236
+    run 5: OK GOPS=4.816868 time=0.445825752 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2794266484 cache_miss_rate=NA% cycles=11340480236 instructions=3168832384
+    run 6: OK GOPS=4.796126 time=0.447753832 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2808152075 cache_miss_rate=NA% cycles=11335848019 instructions=3183278514
+    run 7: OK GOPS=4.825690 time=0.445010666 threads=8 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles4;1:cpu1:tiles4;2:cpu2:tiles4;3:cpu3:tiles4;4:cpu4:tiles4;5:cpu5:tiles4;6:cpu6:tiles4;7:cpu7:tiles4
+      perf: IPC=0.2783570495 cache_miss_rate=NA% cycles=11287139143 instructions=3141854749
+SKIP_UNSUPPORTED_KERNEL=igemm_kernel_8x4_zvl256b_lmul1_unroll8_i8i32; reason=duplicate INT8 source; canonical tree is GEMM_RVV_FP32_INT8_*
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070721/openmp_raw_k1-rvv_1024_runs7_20261003_070721.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070721/openmp_summary_k1-rvv_1024_runs7_20261003_070721.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20261003_070721/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+============================================================
+CASE series=IME cores=1 mode=k1-ime threads=1 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll8
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070816
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll8 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll8
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll8/ime_kernel_8x4_zvl256b_lmul1_unroll8.c
+    run 1: OK GOPS=5.740570 time=0.374088917 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.06569309574 cache_miss_rate=NA% cycles=66633252898 instructions=4377344662
+    run 2: OK GOPS=8.003973 time=0.268302210 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6140432656 cache_miss_rate=NA% cycles=923700470 instructions=567192053
+    run 3: OK GOPS=8.443112 time=0.254347418 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.625337511 cache_miss_rate=NA% cycles=919537344 instructions=575021194
+    run 4: OK GOPS=9.580284 time=0.224156581 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6749896725 cache_miss_rate=NA% cycles=844132939 instructions=569781016
+    run 5: OK GOPS=5.980269 time=0.359094836 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4240966681 cache_miss_rate=NA% cycles=1329839882 instructions=563980663
+    run 6: OK GOPS=8.883280 time=0.241744459 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.6343842065 cache_miss_rate=NA% cycles=889240757 instructions=564120292
+    run 7: OK GOPS=5.447918 time=0.394184291 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles32
+      perf: IPC=0.4462609319 cache_miss_rate=NA% cycles=1303869206 instructions=581865887
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070816/openmp_raw_k1-ime_1024_runs7_20261003_070816.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070816/openmp_summary_k1-ime_1024_runs7_20261003_070816.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070816/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=2 mode=k1-ime threads=2 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll8
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070916
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll8 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll8
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll8/ime_kernel_8x4_zvl256b_lmul1_unroll8.c
+    run 1: OK GOPS=12.001063 time=0.178941123 threads=2 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.02419436205 cache_miss_rate=NA% cycles=190714868173 instructions=4614224569
+    run 2: OK GOPS=12.379050 time=0.173477251 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5054344663 cache_miss_rate=NA% cycles=1135698834 instructions=574021334
+    run 3: OK GOPS=13.210196 time=0.162562586 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4990906889 cache_miss_rate=NA% cycles=1159457445 instructions=578674415
+    run 4: OK GOPS=12.420344 time=0.172900498 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.4880205305 cache_miss_rate=NA% cycles=1188078445 instructions=579806673
+    run 5: OK GOPS=9.692227 time=0.221567623 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.3966854224 cache_miss_rate=NA% cycles=1465984327 instructions=581534612
+    run 6: OK GOPS=13.729452 time=0.156414375 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.5175668255 cache_miss_rate=NA% cycles=1114547704 instructions=576852917
+    run 7: OK GOPS=10.105084 time=0.212515168 threads=2 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16;1:cpu1:tiles16
+      perf: IPC=0.437175447 cache_miss_rate=NA% cycles=1323784945 instructions=578726275
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070916/openmp_raw_k1-ime_1024_runs7_20261003_070916.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070916/openmp_summary_k1-ime_1024_runs7_20261003_070916.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_070916/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+CASE series=IME cores=4 mode=k1-ime threads=4 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll8
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=7
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_071032
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll8 KIND_FILTER=INT8_IME PERF_STAT=1 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll8
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=8
+  WORK: M=1024 N=1024 K=1024 tile_N=32 runs=7
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll8/ime_kernel_8x4_zvl256b_lmul1_unroll8.c
+    run 1: OK GOPS=17.142664 time=0.125271291 threads=4 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.0176338498 cache_miss_rate=NA% cycles=262625734834 instructions=4631102762
+    run 2: OK GOPS=14.912037 time=0.144010082 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3013432975 cache_miss_rate=NA% cycles=1900369933 instructions=572663742
+    run 3: OK GOPS=15.880109 time=0.135231040 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3348368491 cache_miss_rate=NA% cycles=1817913042 instructions=608704275
+    run 4: OK GOPS=14.403990 time=0.149089500 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3262708505 cache_miss_rate=NA% cycles=1863435563 instructions=607984706
+    run 5: OK GOPS=16.195761 time=0.132595416 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3642320625 cache_miss_rate=NA% cycles=1802753762 instructions=656620721
+    run 6: OK GOPS=15.945447 time=0.134676918 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.356350046 cache_miss_rate=NA% cycles=1796626096 instructions=640227792
+    run 7: OK GOPS=16.839240 time=0.127528541 threads=4 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles8;1:cpu1:tiles8;2:cpu2:tiles8;3:cpu3:tiles8
+      perf: IPC=0.3412427317 cache_miss_rate=NA% cycles=1769292210 instructions=603758107
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=7
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_071032/openmp_raw_k1-ime_1024_runs7_20261003_071032.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_071032/openmp_summary_k1-ime_1024_runs7_20261003_071032.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_1024_20261003_071032/raw_logs
+============================================================
+CASE_RESULT=OK
+TIMING_SCOPE_CHECK=OK scope=parallel_tiles_including_required_packing file=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+============================================================
+K1 STRONG-SCALING SUMMARY (time in ms, throughput in GOPS)
+Fixed GEMM=1024x1024x1024 tile_N=32 LMUL=1
+--------------------------------------------------------------------------------
+series  unroll cores  mean_ms   mean_GOPS  ok_runs  failed  build_failed
+--------------------------------------------------------------------------------
+IME     1      1     351.257   6.384369429 7        0       0           
+IME     1      2     191.486   11.38446757 7        0       0           
+IME     1      4     140.667   15.29064714 7        0       0           
+IME     2      1     289.255   7.641161714 7        0       0           
+IME     2      2     197.742   11.10500114 7        0       0           
+IME     2      4     139.681   15.41078529 7        0       0           
+IME     4      1     282.472   7.884051429 7        0       0           
+IME     4      2     189.851   11.48088729 7        0       0           
+IME     4      4     141.719   15.20696257 7        0       0           
+IME     8      1     302.274   7.439915143 7        0       0           
+IME     8      2     182.626   11.93391657 7        0       0           
+IME     8      4     135.486   15.90274971 7        0       0           
+RVV     1      1     2243.58   0.9571727143 7        0       0           
+RVV     1      2     1137.02   1.888728   7        0       0           
+RVV     1      4     604.587   3.552129   7        0       0           
+RVV     1      8     315.577   6.805248   7        0       0           
+RVV     2      1     3448.87   0.6226641429 7        0       0           
+RVV     2      2     1741.98   1.232789714 7        0       0           
+RVV     2      4     906.001   2.370418   7        0       0           
+RVV     2      8     469.495   4.574069429 7        0       0           
+RVV     4      1     3542.12   0.6062714286 7        0       0           
+RVV     4      2     1790.23   1.199564857 7        0       0           
+RVV     4      4     925.04    2.321561143 7        0       0           
+RVV     4      8     480.077   4.473371857 7        0       0           
+RVV     8      1     3236.5    0.6635225714 7        0       0           
+RVV     8      2     1639.17   1.310110857 7        0       0           
+RVV     8      4     848.742   2.530234143 7        0       0           
+RVV     8      8     447.467   4.799630571 7        0       0           
+--------------------------------------------------------------------------------
+CSV summary: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115/k1_strong_scaling_summary.csv
+CSV raw:     /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115/k1_strong_scaling_raw.csv
+============================================================
+============================================================
+DONE status=OK
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115/k1_strong_scaling_raw.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115/k1_strong_scaling_summary.csv
+Live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optimization/microkernels/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_strong_scaling_20261003_063115/k1_strong_scaling.log

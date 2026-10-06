@@ -49,19 +49,19 @@ directory manually only after confirming its campaign process is no longer runni
 
 | Figure/data folder | Launcher | Measurement |
 |---|---|---|
-| `fig01_strong_scaling` | `run_fig01_strong_scaling.sh` | Fixed size; RVV 1/2/4/8 threads and IME 1/2/4 for each kernel |
-| `fig02_weak_scaling` | `run_fig02_weak_scaling.sh` | Paper dimensions 512/672/832/1024 for 1/2/4/8 threads |
-| `fig03_static_vs_dynamic` | `run_fig03_static_vs_dynamic.sh` | Both policies, 8 threads, all matched IME/RVV variants |
-| `fig04_rvv_int8_tuning` | `run_fig04_rvv_int8_tuning.sh` | Standalone canonical RVV INT8 LMUL/unroll inventory |
-| `fig05_rvv_vs_ime_int8` | `run_fig05_rvv_vs_ime_int8.sh` | Standalone RVV and IME inventories; keep backends/configurations separate |
-| `fig06_rvv_fp32_fp64` | `run_fig06_rvv_fp32_fp64.sh` | Standalone FP32 and FP64 inventory |
-| `fig07_rvv_multicore_vs_heterogeneous` | `run_fig07_multicore_comparison.sh` | RVV 8-thread baseline plus 8-thread mixed static/dynamic cases |
-| `fig08_correctness` | `run_fig08_correctness.sh` | Canonical INT8 OpenMP validation plus IME/fallback reference tests |
+| `strong_scaling_performance` | `strong_scaling_performance/run_fig01_strong_scaling.sh` | Fixed-size strong scaling |
+| `weak_scaling_performance` | `weak_scaling_performance/run_fig02_weak_scaling.sh` | Increasing workload with worker count |
+| `static_dynamic_scheduling` | `static_dynamic_scheduling/run_fig03_static_vs_dynamic.sh` | Static and dynamic policies |
+| `rvv_int8_tuning` | `rvv_int8_tuning/run_fig04_rvv_int8_tuning.sh` | Canonical RVV INT8 LMUL/unroll inventory |
+| `heterogeneous_rvv_ime_end_to_end` | `run_fig05_rvv_vs_ime_int8.sh` | Matched end-to-end RVV/IME comparison |
+| `fp32_fp64_comparison` | `fp32_fp64_comparison/run_fig06_rvv_fp32_fp64.sh` | FP32 and FP64 inventory |
+| `multicore_comparison` | `multicore_comparison/run_fig07_multicore_comparison.sh` | RVV and heterogeneous multicore cases |
+| `correctness_validation` | `correctness_validation/run_fig08_correctness.sh` | INT8 correctness checks |
 
 For example:
 
 ```bash
-bash paper_scripts/run_fig04_rvv_int8_tuning.sh --output paper_results/int8_tuning
+bash paper_scripts/rvv_int8_tuning/run_fig04_rvv_int8_tuning.sh --output paper_results/int8_tuning
 ```
 
 The figure wrappers fix their figure selection; all other options are shared.

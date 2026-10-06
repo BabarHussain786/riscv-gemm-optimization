@@ -27,6 +27,8 @@ all_single_core_results_*/
 **/raw_logs/
 *.log
 *.csv
+!datasets/**/*.csv
+!datasets/**/*.log
 
 # Keep optional experiments and documents visible; exclude generated archives.
 **/extra/generated/
