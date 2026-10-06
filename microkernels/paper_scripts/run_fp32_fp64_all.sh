@@ -41,8 +41,10 @@ parse_gflops() { awk -F': ' '/^GFLOPS:/ {print $2; exit}'; }
 
 run_case() {
   local precision="$1" tile="$2" lmul="$3" unroll="$4" kernel="$5" dir="$6"
-  local stem="${precision}_${tile}_lmul${lmul}_U${unroll}" log="${RAW_DIR}/${stem}.log"
-  local build="${RAW_DIR}/${stem}.build.log" out rc t g v run status
+  local stem="${precision}_${tile}_lmul${lmul}_U${unroll}"
+  local log="${RAW_DIR}/${stem}.log"
+  local build="${RAW_DIR}/${stem}.build.log"
+  local out rc t g v run status
   printf '[%s %s LMUL=%s U%s] build\n' "${precision}" "${tile}" "${lmul}" "${unroll}" | tee -a "${LIVE_LOG}"
   if ! (cd "${dir}" && { make clean >/dev/null 2>&1 || true; make; }) > "${build}" 2>&1; then
     printf 'BUILD_FAILED\n' > "${log}"
