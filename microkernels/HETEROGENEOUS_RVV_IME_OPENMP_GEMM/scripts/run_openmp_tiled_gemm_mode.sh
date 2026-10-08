@@ -235,7 +235,7 @@ write_summary_csv()
     awk -F, '
     BEGIN {
         OFS=",";
-        print "mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,M,N,K,tile_N,metric_name,static_tile_split,schedule_policy,schedule_chunk,ok_runs,mean_metric,median_metric,min_metric,max_metric,sample_std_metric,mean_time_sec,min_time_sec,max_time_sec,failed_runs,build_failed_runs,mean_input_packing_time_sec,mean_kernel_time_sec,mean_output_packing_time_sec,phase_timing_scope,output_packing_status";
+        print "mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,M,N,K,tile_N,metric_name,static_tile_split,schedule_policy,schedule_chunk,ok_runs,mean_metric,median_metric,min_metric,max_metric,sample_std_metric,mean_time_sec,min_time_sec,max_time_sec,failed_runs,build_failed_runs";
     }
     NR == 1 { next }
     {
@@ -262,11 +262,6 @@ write_summary_csv()
             sum_value[key]+=value;
             sumsq_value[key]+=value*value;
             sum_time[key]+=t;
-            if ($43 != "NA" && $43 != "") sum_input_pack[key]+=$43;
-            if ($44 != "NA" && $44 != "") sum_kernel[key]+=$44;
-            if ($45 != "NA" && $45 != "") sum_output_pack[key]+=$45;
-            if ($46 != "NA" && $46 != "") phase_scope[key]=$46;
-            if ($47 != "NA" && $47 != "") output_pack_status[key]=$47;
             if (min_value[key] == "" || value < min_value[key]) min_value[key]=value;
             if (max_value[key] == "" || value > max_value[key]) max_value[key]=value;
             if (min_time[key] == "" || t < min_time[key]) min_time[key]=t;
@@ -299,14 +294,9 @@ write_summary_csv()
                 if (variance < 0) variance=0;
                 std=sqrt(variance);
                 mean_time=sum_time[key] / n[key];
-                mean_input_pack=(sum_input_pack[key] == "" ? "NA" : sprintf("%.10g", sum_input_pack[key]/n[key]));
-                mean_kernel=(sum_kernel[key] == "" ? "NA" : sprintf("%.10g", sum_kernel[key]/n[key]));
-                mean_output_pack=(sum_output_pack[key] == "" ? "NA" : sprintf("%.10g", sum_output_pack[key]/n[key]));
-                scope=(phase_scope[key] == "" ? "NA" : phase_scope[key]);
-                output_scope=(output_pack_status[key] == "" ? "NA" : output_pack_status[key]);
-                printf "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%d,%d,%s,%s,%s,%s,%s\n", key, n[key], mean, median, min_value[key], max_value[key], std, mean_time, min_time[key], max_time[key], failed[key]+0, build_failed[key]+0, mean_input_pack, mean_kernel, mean_output_pack, scope, output_scope;
+                printf "%s,%d,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%.10g,%d,%d\n", key, n[key], mean, median, min_value[key], max_value[key], std, mean_time, min_time[key], max_time[key], failed[key]+0, build_failed[key]+0;
             } else {
-                printf "%s,0,NA,NA,NA,NA,NA,NA,NA,NA,%d,%d,NA,NA,NA,NA,NA\n", key, failed[key]+0, build_failed[key]+0;
+                printf "%s,0,NA,NA,NA,NA,NA,NA,NA,NA,%d,%d\n", key, failed[key]+0, build_failed[key]+0;
             }
         }
     }' "${RAW_CSV}" > "${SUMMARY_CSV}"
@@ -744,7 +734,7 @@ perf_stat_value()
     ' "${perf_log}"
 }
 
-printf 'timestamp,mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,actual_threads,M,N,K,tile_N,run,status,return_code,failure_stage,time_sec,metric_name,metric_value,timing_scope,validation_method,mismatch_count,max_error,worker_placement,static_tile_split,schedule_policy,schedule_chunk,output_strip_distribution,paired_rvv_kernel,log_file,perf_cycles,perf_instructions,perf_ipc,perf_cache_references,perf_cache_misses,perf_cache_miss_rate,perf_log_file,input_packing_time_sec,kernel_time_sec,output_packing_time_sec,phase_timing_scope,output_packing_status\n' > "${RAW_CSV}"
+printf 'timestamp,mode,baseline,family,kernel,tile_shape,zvl,lmul,unroll,kind,core_group,requested_threads,actual_threads,M,N,K,tile_N,run,status,return_code,failure_stage,time_sec,metric_name,metric_value,timing_scope,validation_method,mismatch_count,max_error,worker_placement,static_tile_split,schedule_policy,schedule_chunk,output_strip_distribution,paired_rvv_kernel,log_file,perf_cycles,perf_instructions,perf_ipc,perf_cache_references,perf_cache_misses,perf_cache_miss_rate,perf_log_file\n' > "${RAW_CSV}"
 
 log "OpenMP all-kernel tiled GEMM campaign"
 log "MODE=${MODE} ($(mode_label)) M=${M} N=${N} K=${K} tile_N=${TILE_N} RUNS=${RUNS}"
@@ -884,8 +874,7 @@ while IFS= read -r -d '' makefile; do
             "${GEMM_TILE_SCHEDULE}" "${SCHEDULE_CHUNK_VALUE}" "NA" \
             "$(csv_quote "${rvv_kernel}")" \
             "$(csv_quote "${build_log}")" \
-            "NA" "NA" "NA" "NA" "NA" "NA" "NA" \
-            "NA" "NA" "NA" "NA" "NA"
+            "NA" "NA" "NA" "NA" "NA" "NA" "NA"
         continue
     fi
 
@@ -903,8 +892,7 @@ while IFS= read -r -d '' makefile; do
             "${GEMM_TILE_SCHEDULE}" "${SCHEDULE_CHUNK_VALUE}" "NA" \
             "$(csv_quote "${rvv_kernel}")" \
             "$(csv_quote "${build_log}")" \
-            "NA" "NA" "NA" "NA" "NA" "NA" "NA" \
-            "NA" "NA" "NA" "NA" "NA"
+            "NA" "NA" "NA" "NA" "NA" "NA" "NA"
         continue
     fi
 
@@ -919,11 +907,6 @@ while IFS= read -r -d '' makefile; do
         rc=$?
         csv_line="$(grep '^CSV_RUN,' "${run_log}" | tail -1 || true)"
         timing_scope="$(sed -n 's/^TIMING_SCOPE=//p' "${run_log}" | tail -1)"
-        input_packing_time_sec="$(sed -n 's/^INPUT_PACKING_TIME_SEC=//p' "${run_log}" | tail -1)"
-        kernel_time_sec="$(sed -n 's/^KERNEL_TIME_SEC=//p' "${run_log}" | tail -1)"
-        output_packing_time_sec="$(sed -n 's/^OUTPUT_PACKING_TIME_SEC=//p' "${run_log}" | tail -1)"
-        phase_timing_scope="$(sed -n 's/^PHASE_TIMING_SCOPE=//p' "${run_log}" | tail -1)"
-        output_packing_status="$(sed -n 's/^OUTPUT_PACKING_STATUS=//p' "${run_log}" | tail -1)"
         validation_method="$(sed -n 's/^VALIDATION_METHOD=//p' "${run_log}" | tail -1)"
         failure_stage="$(sed -n 's/^FAILURE_STAGE=//p' "${run_log}" | tail -1)"
         static_tile_split="$(sed -n 's/^STATIC_TILE_SPLIT=//p' "${run_log}" | tail -1)"
@@ -992,11 +975,6 @@ EOF_CSV
             actual_threads="NA"
             failure_stage="PROCESS"
             timing_scope="NA"
-            input_packing_time_sec="NA"
-            kernel_time_sec="NA"
-            output_packing_time_sec="NA"
-            phase_timing_scope="NA"
-            output_packing_status="NA"
             validation_method="NA"
             static_tile_split="NA"
             worker_placement="NA"
@@ -1031,10 +1009,7 @@ EOF_CSV
             "$(csv_quote "${run_log}")" \
             "${perf_cycles}" "${perf_instructions}" "${perf_ipc}" \
             "${perf_cache_references}" "${perf_cache_misses}" \
-            "${perf_cache_miss_rate}" "${perf_log_field}" \
-            "${input_packing_time_sec}" "${kernel_time_sec}" \
-            "${output_packing_time_sec}" "$(csv_quote "${phase_timing_scope}")" \
-            "$(csv_quote "${output_packing_status}")"
+            "${perf_cache_miss_rate}" "${perf_log_field}"
 
         # Run 1 is the validation gate. Never collect unvalidated timing rows
         # after the tested implementation has already failed correctness.

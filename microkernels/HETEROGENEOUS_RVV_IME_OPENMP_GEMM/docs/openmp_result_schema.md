@@ -33,11 +33,6 @@ One row describes one kernel repetition.
 | `tile_N` | Width of one OpenMP output-column strip |
 | `run`, `status` | Repetition number and final state |
 | `time_sec` | Timed OpenMP tile-region duration |
-| `input_packing_time_sec` | Aggregate worker time spent preparing packed input panels |
-| `kernel_time_sec` | Aggregate worker time spent inside the selected RVV/IME kernels |
-| `output_packing_time_sec` | Output reshape/packing time; zero when the current driver writes final C layout directly |
-| `phase_timing_scope` | Definition of phase values; aggregate worker time versus wall-clock total |
-| `output_packing_status` | `NOT_PRESENT_IN_CURRENT_DRIVER` for this implementation |
 | `metric_name`, `metric_value` | `GFLOPS` or `GOPS` and its value |
 | `validation_method` | Independent output reference used for this row |
 | `mismatch_count`, `max_error` | Numerical validation results |
@@ -70,16 +65,11 @@ median_metric
 min_metric
 max_metric
 sample_std_metric
-    mean_time_sec
-    min_time_sec
-    max_time_sec
-    failed_runs
-    build_failed_runs
-    mean_input_packing_time_sec
-    mean_kernel_time_sec
-    mean_output_packing_time_sec
-    phase_timing_scope
-    output_packing_status
+mean_time_sec
+min_time_sec
+max_time_sec
+failed_runs
+build_failed_runs
 ```
 
 Use `mean_metric` with `sample_std_metric` for the main performance figure. Use `median_metric` when reporting a robust central value.

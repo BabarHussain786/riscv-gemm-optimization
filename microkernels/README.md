@@ -1,178 +1,137 @@
-# RISC-V RVV and SpacemiT IME GEMM Microkernels
+# RVV--IME GEMM Microkernels on the SpacemiT K1
 
-This repository contains ZVL256 RISC-V GEMM micro-kernels and reproducible
-single-core, heterogeneous OpenMP, and numerical-accuracy experiments for
-SpacemiT K1 and K3 systems.
+This repository contains the K1 source kernels, benchmark workflows, measured
+datasets, and analysis assets used for the RVV--IME GEMM paper. The paper
+targets a 256-bit RVV implementation with INT8 inputs, INT32 accumulation, and
+native IME execution on the K1.
 
-## Start Here: K1
+## Project order
 
-For the current experiment definitions and measurement policy, read the
-[experimental roadmap](EXPERIMENTAL_ROADMAP.md).  The individual launchers are
-grouped by experiment under `paper_scripts/`.
+The repository is organized in the order used by the paper:
 
-Run commands from this folder unless the linked module README says otherwise.
-The K1 source families and launchers remain at their established paths so their
-Makefiles, includes, and benchmark dependencies continue to resolve.
+1. **Kernel sources** — RVV FP32, FP64, and INT8 families, plus native IME
+   wrappers.
+2. **K1 execution module** — OpenMP worker placement, packing, tile execution,
+   scheduling, and output formation.
+3. **Paper scripts** — reproducible entry points for the eight paper figures.
+4. **Accuracy checker** — independent INT64-reference validation for INT8 RVV
+   and IME outputs.
+5. **Measured datasets** — clean summaries, raw runs, metadata, and campaign
+   provenance organized by figure.
+6. **Analysis and plots** — scripts in the OpenMP module consume measured
+   exports; no synthetic values are generated.
 
-| Task | Main entry point |
-|---|---|
-| Complete single-core campaign | [run_k1_single_core_0_7_1024.sh](paper_scripts/run_k1_single_core_0_7_1024.sh) |
-| Standalone INT8, both tile shapes | [run_k1_standalone_int8_8x4_8x8_kernels.sh](paper_scripts/run_k1_standalone_int8_8x4_8x8_kernels.sh) |
-| Multicore and heterogeneous experiments | [OpenMP module guide](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/README.md) |
-| Strong scaling | [strong-scaling launcher](paper_scripts/strong_scaling_performance/) |
-| Weak scaling | [weak-scaling launcher](paper_scripts/weak_scaling_performance/) |
-| Partitioning and scheduling | [static/dynamic launcher](paper_scripts/static_dynamic_scheduling/) |
-| Kernel tuning | [run_k1_kernel_tuning.sh](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_k1_kernel_tuning.sh) |
-| Plot measured experiments | [plot_k1_paper_experiments.py](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/analysis/plot_k1_paper_experiments.py) |
-| Correctness checks | [Accuracy validation guide](RVV_IME_GEMM_ACCURACY_VALIDATION/README.md) |
+## K1 experiment sequence
 
-The `run_k1_01_*` launcher is required by the single-core wrapper. The two
-tile-specific standalone launchers are required by the combined INT8 launcher;
-they are supporting scripts, not redundant copies to remove.
+Run the paper experiments in this order when collecting a new K1 campaign:
 
-The repository keeps only the reproducibility inputs needed for the paper;
-generated results and supplementary archives are intentionally excluded.
+For one command that dispatches all eight figures through the shared planner,
+use [`run_all_paper_figures.sh`](run_all_paper_figures.sh). Individual figure
+entry points remain available for selective or resumed campaigns.
 
-## Workloads
+| Paper figure | Experiment | Entry point | Dataset folder |
+|---|---|---|---|
+| Fig. 1 | Strong scaling | [`run_fig01_strong_scaling.sh`](paper_scripts/strong_scaling_performance/run_fig01_strong_scaling.sh) | [`datasets/fig01_strong_scaling/`](datasets/fig01_strong_scaling/) |
+| Fig. 2 | Weak scaling | [`run_fig02_weak_scaling.sh`](paper_scripts/weak_scaling_performance/run_fig02_weak_scaling.sh) | [`datasets/fig02_weak_scaling/`](datasets/fig02_weak_scaling/) |
+| Fig. 3 | Static versus dynamic scheduling | [`run_fig03_static_vs_dynamic.sh`](paper_scripts/static_dynamic_scheduling/run_fig03_static_vs_dynamic.sh) | [`datasets/fig03_static_dynamic/`](datasets/fig03_static_dynamic/) |
+| Fig. 4 | RVV INT8 tuning | [`run_fig04_rvv_int8_tuning.sh`](paper_scripts/rvv_int8_tuning/run_fig04_rvv_int8_tuning.sh) | [`datasets/fig04_rvv_int8_tuning/`](datasets/fig04_rvv_int8_tuning/) |
+| Fig. 5 | RVV--IME INT8 comparison | [`run_fig05_fair_end_to_end.sh`](paper_scripts/heterogeneous_rvv_ime_end_to_end/run_fig05_fair_end_to_end.sh) | [`datasets/fig05_rvv_ime_comparison/`](datasets/fig05_rvv_ime_comparison/) |
+| Fig. 6 | FP32 and FP64 reference measurements | [`run_fig06_rvv_fp32_fp64.sh`](paper_scripts/fp32_fp64_comparison/run_fig06_rvv_fp32_fp64.sh) | [`datasets/fig06_fp32_fp64/`](datasets/fig06_fp32_fp64/) |
+| Fig. 7 | Multicore and heterogeneous execution | [`run_fig07_multicore_comparison.sh`](paper_scripts/multicore_comparison/run_fig07_multicore_comparison.sh) | [`datasets/fig07_multicore_heterogeneous/`](datasets/fig07_multicore_heterogeneous/) |
+| Fig. 8 | Independent correctness validation | [`run_fig08_correctness.sh`](paper_scripts/correctness_validation/run_fig08_correctness.sh) | [`datasets/fig08_correctness/`](datasets/fig08_correctness/) |
 
-| Family | Computation | Output | Software tiles | Backend |
-|---|---|---|---|---|
-| FP32 SGEMM | FP32 x FP32 | FP32 | 8x4, 8x8 | RVV |
-| FP64 DGEMM | FP64 x FP64 | FP64 | 8x4, 8x8 | RVV |
-| INT8 IGEMM | INT8 x INT8 | INT32 | 8x4, 8x8 | RVV widening MAC |
-| Native IME | INT8 x INT8 | INT32 | 8x4, 8x8 | SpacemiT VMADOT |
+The figure entry points are intentionally short. Complete campaign logic is in
+[`paper_scripts/orchestration/`](paper_scripts/orchestration/) and the K1
+OpenMP module; the entry points select the figure-specific experiment without
+duplicating the implementation.
 
-All public kernel names, source symbols, Makefiles, and campaign scripts use
-the `zvl256b` target. Kernel variants cover LMUL and K-loop unroll factors
-encoded directly in each directory name. Experimental IME `lmulmf2` variants
-remain disabled unless `ENABLE_EXPERIMENTAL_MF2=1` is requested.
-
-## Repository Layout
+## Repository layout
 
 ```text
-riscv-rvv-ime-gemm-microkernels/
-+-- GEMM_RVV_FP32_INT8_8x4_Baseline/
-+-- GEMM_RVV_FP32_INT8_8x8_Baseline/
-+-- GEMM_RVV_FP64_INT8_8x4_Baseline/
-+-- GEMM_RVV_FP64_INT8_8x8_Baseline/
-+-- IME_NATIVE_KERNELS/
-+-- HETEROGENEOUS_RVV_IME_OPENMP_GEMM/
-+-- RVV_IME_GEMM_ACCURACY_VALIDATION/
-+-- datasets/
-+-- paper_scripts/
-+-- benchmarking/
-+-- EXPERIMENTAL_ROADMAP.md
+microkernels/
+├── GEMM_RVV_FP32_INT8_8x4_Baseline/   RVV INT8 and FP32 tile family
+├── GEMM_RVV_FP32_INT8_8x8_Baseline/   RVV INT8 and FP32 tile family
+├── GEMM_RVV_FP64_INT8_8x4_Baseline/   RVV FP64/INT8 reference family
+├── GEMM_RVV_FP64_INT8_8x8_Baseline/   RVV FP64/INT8 reference family
+├── IME_NATIVE_KERNELS/                 Native K1 IME wrappers and kernels
+├── HETEROGENEOUS_RVV_IME_OPENMP_GEMM/  K1 OpenMP module and analysis tools
+├── RVV_IME_GEMM_ACCURACY_VALIDATION/   Independent INT64 reference checker
+├── paper_scripts/                      Paper campaign entry points and runners
+├── datasets/                           Figure-organized measured exports
+└── benchmarking/                       Verification records and campaign support
 ```
 
-The four baseline folders contain standalone FP32, FP64, and INT8 RVV kernel
-families for 8x4 and 8x8 output tiles. The combined campaign uses the INT8
-copies under `GEMM_RVV_FP32_INT8_*` as the canonical INT8 source and does not
-repeat the identical copies stored with the FP64 families. `IME_NATIVE_KERNELS`
-contains native IME wrappers and their matching RVV widening kernels. Its
-kernel directories use a small local benchmark wrapper backed by the shared
-`IME_NATIVE_KERNELS/ime_bench_common.h` validation driver.
+## K1 execution model
 
-## Single-Core Characterization
+The combined K1 configuration uses four IME workers on cores 0--3 and four RVV
+workers on cores 4--7. Output-column strips use `tile_N=32`; each strip has one
+owner. The timed end-to-end path includes input packing, tile-kernel execution,
+scheduling, and output formation. Allocation, initialization, warm-up,
+validation, and cleanup are outside that timing scope.
 
-K1 benchmarks RVV on cores 0-7 and native IME on cores 0-3:
+The source kernel families use 256-bit RVV (`zvl256b`) and the paper tile shapes
+`8x4` and `8x8`. Kernel directories encode the LMUL and reduction-loop unroll
+factor in their names. Native IME calls use the K1 IME path; they do not replace
+the RVV kernels or change worker affinity.
+
+## Preliminary checks
+
+Run these checks from the repository root before a board campaign:
 
 ```bash
-bash paper_scripts/run_k1_single_core_0_7_1024.sh
+bash paper_scripts/tools/check_project_completeness.sh
+python3 paper_scripts/orchestration/paper_campaign.py --dry-run --no-perf
 ```
 
-This is the recommended command. It runs FP32 first, followed by FP64, one
-canonical INT8 RVV set, and native IME. Each kernel must pass a small
-`15x15x69` correctness test before its `1024x1024x1024` timed runs begin.
-The non-multiple validation shape also checks row, column, and K cleanup paths.
+The first command checks all shell scripts, delegated workflow targets, figure
+entry points, and dataset exports. The second command creates plans only; it
+does not build kernels or run hardware measurements.
 
-The launcher selects each path explicitly. Native IME runs are pinned to
-IME-capable cores, while RVV runs call the RVV path directly. Native kernels
-check the current CPU but do not move threads between cores.
-
-The wrapper calls the full launcher below. Do not run both commands for one
-campaign, because that would repeat the same complete benchmark:
+To run all eight paper figures through one command on the K1, use:
 
 ```bash
-bash paper_scripts/run_k1_01_rvv_ime_0_7_1024.sh
+bash run_all_paper_figures.sh
 ```
 
-For a direct INT8 micro-kernel check without OpenMP, use:
+The same command can create a complete plan without touching the hardware:
 
 ```bash
-M=1024 N=1024 K=1024 RUNS=6 \
-    bash paper_scripts/run_k1_standalone_int8_kernels.sh
+bash run_all_paper_figures.sh --dry-run --no-perf
 ```
 
-This command tests the 8x4 RVV and native IME kernels with `LMUL=1` and
-unroll factors `1,2,4,8` on RVV cores `4,5,6,7` and IME cores `0,1,2,3`.
-It uses one pinned process per run and prints a compact table. This is a
-kernel-throughput/tuning experiment, not strong scaling, because no OpenMP
-workers are used. When Linux `perf` is available, the table and CSV files also
-include IPC from the measured cycles and instructions; unavailable counters
-are recorded as `NA`.
+## Accuracy validation
 
-K3-only exploratory material is outside this paper-focused K1 tree and is not
-needed for the reported experiments.
+The independent checker is kept at
+`RVV_IME_GEMM_ACCURACY_VALIDATION/`. It compares native IME and RVV INT8
+outputs against an INT64 accumulation reference and reports exact-match,
+overflow, mismatch, and error-histogram information. Its paper entry point is
+the Fig. 8 script listed above. The source checker remains separate from
+`datasets/fig08_correctness/`, which is reserved for its measured outputs.
 
-## Heterogeneous OpenMP GEMM
+## Dataset policy
 
-The OpenMP module implements the two-level structure requested for K1:
+The figure dataset index is [`datasets/README.md`](datasets/README.md), and the
+machine-readable inventory is [`datasets/MANIFEST.csv`](datasets/MANIFEST.csv).
+Within an available figure export:
 
 ```text
-outer level: 2 cluster controllers
-  IME cluster: 4 workers pinned to cores 0-3
-  RVV cluster: 4 workers pinned to cores 4-7
-inner level: each cluster uses omp for schedule(static)
+clean/       summaries and statistics used for analysis
+raw/         per-run records
+metadata/    logs, manifests, failure records, and campaign plans
 ```
 
-The structure above describes static scheduling. The module also provides
-dynamic scheduling; see its [scheduling guide](HETEROGENEOUS_RVV_IME_OPENMP_GEMM/README.md#scheduling-policies).
-The IME team calls the IME wrapper and the RVV team calls the matching RVV
-widening micro-kernel. The default static workload ratio is 4:1 and can be
-changed through two environment values.
-
-```bash
-cd HETEROGENEOUS_RVV_IME_OPENMP_GEMM
-M=1024 N=1024 K=1024 TILE_N=32 RUNS=6 \
-MIXED_IME_TILE_WEIGHT=4 MIXED_RVV_TILE_WEIGHT=1 \
-bash scripts/run_k1_heterogeneous_openmp_gemm_1024.sh
-```
-
-The benchmark uses cluster-aware placement: workers are pinned once before the
-tile loop and own separate output regions. Native kernel calls do not change
-worker affinity. The available system memory-node list is recorded in every
-OpenMP campaign log.
-
-## Accuracy Validation
-
-The kept accuracy method compares native IME and RVV INT8-to-INT32 outputs
-against an independent INT64-accumulation reference:
-
-```bash
-cd RVV_IME_GEMM_ACCURACY_VALIDATION
-bash run_int8_ime_vs_rvv_accuracy.sh k1 1
-```
-
-For every output element, the checker reports exact-match status, signed and
-absolute error, mismatch count, maximum error, overflow status, and error
-histograms. See `RVV_IME_GEMM_ACCURACY_VALIDATION/README.md` for details.
-
-## K1 Paper Experiments
-
-Separate strong-scaling, weak-scaling, scheduling, tuning, end-to-end, and
-validation launchers are grouped under `paper_scripts/`. They save measured
-data under the experiment-specific output directories; the matching analysis
-programs create PNG and PDF figures without synthetic data. Each subdirectory
-contains a short README with the scope and command for that experiment.
+The manifest distinguishes complete, archived, partial, and pending datasets.
+Missing K1 measurements are documented rather than inferred from plots or
+replaced with synthetic values. `paper_results/` is optional planner output and
+is not required to build the project or use the measured datasets.
 
 ## Requirements
 
-- RISC-V Linux with RVV and a 256-bit vector implementation.
-- GCC with RVV intrinsic and OpenMP support.
-- GNU Make, Bash, `taskset`, and standard Linux affinity interfaces.
-- IME-capable SpacemiT cores for native IME execution.
+- SpacemiT K1 board with RVV and IME support.
+- RISC-V Linux, GCC with RVV intrinsics and OpenMP, GNU Make, Bash, and
+  `taskset`.
+- A 256-bit RVV implementation (`zvl256b`).
+- IME-capable K1 cores for native IME experiments.
 
-## Research Notice
-
-This repository is maintained for research at the Department of Computer
-Science, University of Salerno. See `LICENSE`.
+All benchmark commands must be run on the K1 for actual measurements. Local
+dry-runs validate campaign planning and file organization only.

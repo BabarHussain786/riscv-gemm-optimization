@@ -49,9 +49,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef IME_PHASE_TIMING
-#include "ime_output_phase_hooks.h"
-#endif
 #include <sys/stat.h>
 
 /* Check at compile time whether this build has RISC-V vector support. */
@@ -686,9 +683,6 @@ static void scatter_output(ime_profile profile, BLASLONG m_top, BLASLONG n_top,
                            const int32_t out[IME_MAX_OUTPUT_VALUES],
                            int32_t *C, BLASLONG ldc)
 {
-#ifdef IME_PHASE_TIMING
-    double output_phase_start = ime_output_phase_now();
-#endif
     /* Visit each of the 4 output columns in the software tile. */
     for (int c = 0; c < IME_NR; ++c) {
         /* Visit each of the 8 output rows in the software tile. */
@@ -699,9 +693,6 @@ static void scatter_output(ime_profile profile, BLASLONG m_top, BLASLONG n_top,
             C[ci] = add_scaled_wrap_i32(C[ci], out[output_index(profile, r, c)], alpha);
         }
     }
-#ifdef IME_PHASE_TIMING
-    ime_output_phase_add(output_phase_start);
-#endif
 }
 
 /* Choose A60 or A100 native accumulation based on detected hardware profile. */
@@ -899,6 +890,7 @@ int ime_kernel_8x4_zvl256b_lmul1_unroll1(BLASLONG M, BLASLONG N, BLASLONG K,
 #undef IME_A100_DOT_STEP
 #undef IME_A60_DOT_STEP
 #endif
+
 
 
 

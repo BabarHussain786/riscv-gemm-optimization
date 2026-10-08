@@ -1,0 +1,9 @@
+figure,dataset_folder,status,clean_exports,raw_exports,metadata_exports,notes
+fig01,fig01_strong_scaling,complete,clean/summary.csv,raw/runs.csv,metadata/campaign.log;archive_20260904/,Current campaign plus dated archive.
+fig02,fig02_weak_scaling,archived,clean/summary.csv,raw/runs.csv,metadata/campaign.log,Archived K1 weak-scaling export.
+fig03,fig03_static_dynamic,archived,clean/summary.csv,raw/runs.csv,metadata/campaign.log,Archived static-versus-dynamic export.
+fig04,fig04_rvv_int8_tuning,archived,clean/summary.csv;clean/int8_statistics.csv,raw/runs.csv,metadata/campaign.log,Archived tuning export with INT8 statistics.
+fig05,fig05_rvv_ime_comparison,complete,clean/clean_dataset.csv;clean/combined_statistics.csv;clean/matched_comparison.csv;clean/summary.csv,raw/accepted_runs.csv;raw/all_runs.csv;raw/cleaned_runs.csv,metadata/manifest.json;metadata/cleaning_notes.txt;metadata/failures.csv;metadata/failed_cases.csv,Current cleaned and raw campaign export.
+fig06,fig06_fp32_fp64,partial,clean/fp32_statistics.csv,,metadata/planned_campaign_20261008.json,FP64 measurements still required on K1.
+fig07,fig07_multicore_heterogeneous,archived,clean/summary.csv,raw/runs.csv,metadata/campaign.log,Archived multicore heterogeneous export.
+fig08,fig08_correctness,pending,,,,metadata/planned_campaign_20261008.json,Independent K1 correctness run still required.

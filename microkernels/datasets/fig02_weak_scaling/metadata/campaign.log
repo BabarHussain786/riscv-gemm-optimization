@@ -1,0 +1,274 @@
+EXPERIMENT=k1_weak_scaling
+STARTED=Fri Sep  4 11:26:25 AM CST 2026
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_weak_scaling_20260904_112625
+============================================================
+CASE series=RVV cores=1 mode=k1-rvv threads=1 M=512 N=512 K=512 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=512 N=512 K=512 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_512_20260904_112625
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_RVV PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+ERROR: no buildable kernel source files were found for mode k1-rvv
+============================================================
+DONE status=FAILED
+kernels_built=0
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_512_20260904_112625/openmp_raw_k1-rvv_512_runs6_20260904_112625.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_512_20260904_112625/openmp_summary_k1-rvv_512_runs6_20260904_112625.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_512_20260904_112625/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+CASE series=RVV cores=2 mode=k1-rvv threads=2 M=648 N=648 K=648 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=648 N=648 K=648 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_648_20260904_112633
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_RVV PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+ERROR: no buildable kernel source files were found for mode k1-rvv
+============================================================
+DONE status=FAILED
+kernels_built=0
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_648_20260904_112633/openmp_raw_k1-rvv_648_runs6_20260904_112633.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_648_20260904_112633/openmp_summary_k1-rvv_648_runs6_20260904_112633.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_648_20260904_112633/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+CASE series=RVV cores=4 mode=k1-rvv threads=4 M=816 N=816 K=816 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=816 N=816 K=816 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_816_20260904_112641
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_RVV PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+ERROR: no buildable kernel source files were found for mode k1-rvv
+============================================================
+DONE status=FAILED
+kernels_built=0
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_816_20260904_112641/openmp_raw_k1-rvv_816_runs6_20260904_112641.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_816_20260904_112641/openmp_summary_k1-rvv_816_runs6_20260904_112641.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_816_20260904_112641/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+CASE series=RVV cores=8 mode=k1-rvv threads=8 M=1024 N=1024 K=1024 tile_N=32 schedule=static chunk=1 kernel=igemm_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-rvv (K1 all-core RVV OpenMP baseline) M=1024 N=1024 K=1024 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-7 execute RVV kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20260904_112649
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=8 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=igemm_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_RVV PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+ERROR: no buildable kernel source files were found for mode k1-rvv
+============================================================
+DONE status=FAILED
+kernels_built=0
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20260904_112649/openmp_raw_k1-rvv_1024_runs6_20260904_112649.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20260904_112649/openmp_summary_k1-rvv_1024_runs6_20260904_112649.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-rvv.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-rvv.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-rvv.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-rvv_1024_20260904_112649/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+CASE series=IME cores=1 mode=k1-ime threads=1 M=512 N=512 K=512 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=512 N=512 K=512 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_512_20260904_112657
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=1 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=512 N=512 K=512 tile_N=32 runs=6
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+    run 1: OK GOPS=7.056755 time=0.038039502 threads=1 validation=1
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+    run 2: OK GOPS=7.697543 time=0.034872875 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+    run 3: OK GOPS=6.936376 time=0.038699668 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+    run 4: OK GOPS=7.362279 time=0.036460917 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+    run 5: OK GOPS=7.391921 time=0.036314707 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+    run 6: OK GOPS=6.732120 time=0.039873835 threads=1 validation=0
+      schedule: static chunk=0
+      workers: 0:cpu0:tiles16
+============================================================
+DONE status=OK
+kernels_built=1
+ok_runs=6
+failed_runs=0
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_512_20260904_112657/openmp_raw_k1-ime_512_runs6_20260904_112657.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_512_20260904_112657/openmp_summary_k1-ime_512_runs6_20260904_112657.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_512_20260904_112657/raw_logs
+============================================================
+CASE_RESULT=OK
+============================================================
+CASE series=IME cores=2 mode=k1-ime threads=2 M=648 N=648 K=648 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=648 N=648 K=648 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_648_20260904_112712
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=2 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=648 N=648 K=648 tile_N=32 runs=6
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_openmp_tiled_gemm_mode.sh: line 632: 2946818 Illegal instruction     (core dumped) "${benchmark_command[@]}" > "${run_log}" 2>&1
+    run 1: RUN_FAILED metric=NA time=NA threads=NA validation=1 return=132 stage=PROCESS
+      schedule: static chunk=0
+    validation gate stopped remaining runs for ime_kernel_8x4_zvl256b_lmul1_unroll4
+============================================================
+DONE status=FAILED
+kernels_built=1
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_648_20260904_112712/openmp_raw_k1-ime_648_runs6_20260904_112712.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_648_20260904_112712/openmp_summary_k1-ime_648_runs6_20260904_112712.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_648_20260904_112712/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+CASE series=IME cores=4 mode=k1-ime threads=4 M=816 N=816 K=816 tile_N=32 schedule=static chunk=1 kernel=ime_kernel_8x4_zvl256b_lmul1_unroll4
+OpenMP all-kernel tiled GEMM campaign
+MODE=k1-ime (K1 IME-cluster OpenMP baseline) M=816 N=816 K=816 tile_N=32 RUNS=6
+CORE_PLAN=cores 0-3 execute native IME kernels
+PROJECT_ROOT=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated
+RESULT_DIR=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_816_20260904_112738
+COMPILER=gcc (Bianbu 14.2.0-4ubuntu2~24.04bb1) 14.2.0
+BUILD_FLAGS=-O3 -std=c11 -Wall -Wextra -Wno-unknown-pragmas -fopenmp -march=rv64gcv_zvl256b -mabi=lp64d
+OMP_NUM_THREADS=4 OMP_PROC_BIND=close OMP_PLACES=cores OMP_DYNAMIC=false OMP_MAX_ACTIVE_LEVELS=2
+TILE_SCHEDULE=static DYNAMIC_CHUNK=1
+GEMM_VALIDATE=1 VALIDATE_EACH_RUN=0 GEMM_WARMUP=1 ENABLE_MF2=0 BUILD_ONLY=0 ZVL_FILTER=256b KERNEL_FILTER=ime_kernel_8x4_zvl256b_lmul1_unroll4 KIND_FILTER=INT8_IME PERF_STAT=0 STATIC_IME_WEIGHT=4 STATIC_RVV_WEIGHT=1
+Cpus_allowed_list:	0-7
+MEMORY_NODES_ONLINE=not_exposed
+CLUSTER_PLACEMENT=exact_core_affinity; contiguous_output_ownership
+============================================================
+KERNEL: ime_kernel_8x4_zvl256b_lmul1_unroll4
+  MODE: K1 IME-cluster OpenMP baseline
+  BASELINE: IME_NATIVE_KERNELS
+  FAMILY: IME_GEMM_INT8_I8I32_8x4_NATIVE
+  PATH: INT8 native IME GEMM (INT8 x INT8 -> INT32)
+  TILE: 8x4 ZVL=256b LMUL=1 UNROLL=4
+  WORK: M=816 N=816 K=816 tile_N=32 runs=6
+  CORES: cores 0-3 execute native IME kernels
+  INPUT_CONTRACT: IME_FULL_K_MAJOR
+PRIMARY_SOURCE=/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/IME_NATIVE_KERNELS/IME_GEMM_INT8_I8I32_8x4_NATIVE/ime_kernel_8x4_zvl256b_lmul1_unroll4/ime_kernel_8x4_zvl256b_lmul1_unroll4.c
+/home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/scripts/run_openmp_tiled_gemm_mode.sh: line 632: 2947743 Illegal instruction     (core dumped) "${benchmark_command[@]}" > "${run_log}" 2>&1
+    run 1: RUN_FAILED metric=NA time=NA threads=NA validation=1 return=132 stage=PROCESS
+      schedule: static chunk=0
+    validation gate stopped remaining runs for ime_kernel_8x4_zvl256b_lmul1_unroll4
+============================================================
+DONE status=FAILED
+kernels_built=1
+ok_runs=0
+failed_runs=1
+build_failed=0
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_816_20260904_112738/openmp_raw_k1-ime_816_runs6_20260904_112738.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_816_20260904_112738/openmp_summary_k1-ime_816_runs6_20260904_112738.csv
+Latest raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_raw_latest_k1-ime.csv
+Latest summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_summary_latest_k1-ime.csv
+Latest live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_live_latest_k1-ime.log
+Raw logs: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/openmp_results_k1-ime_816_20260904_112738/raw_logs
+============================================================
+CASE_RESULT=FAILED runner_rc=1
+============================================================
+DONE status=FAILED failed_cases=6
+Raw CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_weak_scaling_20260904_112625/k1_weak_scaling_raw.csv
+Summary CSV: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_weak_scaling_20260904_112625/k1_weak_scaling_summary.csv
+Live log: /home/bananapi/MAT/kernels riscv rvv 1.0/FINAL/riscv-rvv-ime-gemm-microkernels-updated/HETEROGENEOUS_RVV_IME_OPENMP_GEMM/results/paper_experiments/k1_weak_scaling_20260904_112625/k1_weak_scaling.log

@@ -1,161 +1,44 @@
-# K1 paper data collection
+# Paper scripts
 
-One folder contains the master launcher, eight figure launchers, three adapted
-existing measurement runners, the campaign planner, and host-only tests.
-Kernel sources remain in their existing directories. Python 3.9+, Bash, Make,
-taskset, and an RVV-capable GCC are required. Measurements require K1 Linux.
-`perf` is optional; unavailable counters must not be interpreted as zero IPC.
-
-## Start with a plan
-
-From the project root:
-
-```bash
-bash paper_scripts/run_all.sh --dry-run --output paper_results/k1_plan
-```
-
-This writes the complete case list and the available/missing configuration
-inventory without compiling or running anything. The default sweep covers
-every available nonexperimental canonical LMUL with U1, U2, U4, U8 and both
-8x4/8x8 tiles. Inspect the printed case counts: the full sweep can take a long
-time and recompiles individual cases. The current inventory gives 108
-nonexperimental kernel variants and 700 default cases. Start with one figure
-if needed. A case contains multiple repetitions; 700 is not the run count.
-
-## Run everything on K1
-
-```bash
-bash paper_scripts/run_all.sh --output paper_results/k1_run_01
-```
-
-Run sequentially on an otherwise idle board. Do not run other benchmark
-launchers concurrently. This suite locks its source root because standalone
-runners use `make clean` and build in the original kernel folders. It does
-not change the board frequency governor or install system packages.
-
-Use the same options to resume a planned or interrupted campaign:
-
-```bash
-bash paper_scripts/run_all.sh --output paper_results/k1_run_01 --resume
-```
-
-Completed cases with recorded data are skipped. Failed/interrupted cases get
-a new attempt directory; old attempts remain. Source or option changes refuse
-resume, so different configurations cannot silently share one dataset.
-After a power loss, inspect `.paper_campaign.lock/owner.json`; remove that lock
-directory manually only after confirming its campaign process is no longer running.
-
-## One entry script for each figure
-
-| Figure/data folder | Launcher | Measurement |
-|---|---|---|
-| `strong_scaling_performance` | `strong_scaling_performance/run_fig01_strong_scaling.sh` | Fixed-size strong scaling |
-| `weak_scaling_performance` | `weak_scaling_performance/run_fig02_weak_scaling.sh` | Increasing workload with worker count |
-| `static_dynamic_scheduling` | `static_dynamic_scheduling/run_fig03_static_vs_dynamic.sh` | Static and dynamic policies |
-| `rvv_int8_tuning` | `rvv_int8_tuning/run_fig04_rvv_int8_tuning.sh` | Canonical RVV INT8 LMUL/unroll inventory |
-| `heterogeneous_rvv_ime_end_to_end` | `run_fig05_rvv_vs_ime_int8.sh` | Matched end-to-end RVV/IME comparison |
-| `fp32_fp64_comparison` | `fp32_fp64_comparison/run_fig06_rvv_fp32_fp64.sh` | FP32 and FP64 inventory |
-| `multicore_comparison` | `multicore_comparison/run_fig07_multicore_comparison.sh` | RVV and heterogeneous multicore cases |
-| `correctness_validation` | `correctness_validation/run_fig08_correctness.sh` | INT8 correctness checks |
-
-For example:
-
-```bash
-bash paper_scripts/rvv_int8_tuning/run_fig04_rvv_int8_tuning.sh --output paper_results/int8_tuning
-```
-
-The figure wrappers fix their figure selection; all other options are shared.
-
-## Collect more data
-
-```bash
-bash paper_scripts/run_all.sh \
-  --sizes 256,512,1024,2048 --runs 10 \
-  --rvv-cores '0 1 2 3 4 5 6 7' --ime-cores '0 1 2 3' \
-  --weights 1:1,2:1,4:1,8:1 --chunks 1,2,4 \
-  --accuracy-runs 5 --accuracy-shapes 15x15x69,64x64x64,1024x1024x1024 \
-  --output paper_results/k1_extended
-```
-
-- Performance defaults: size 1024, six repetitions, standalone RVV core 4 and
-  IME core 0, strip width 32, static weights 4:1, dynamic chunk 1.
-- Standalone core options do not change the established OpenMP core groups.
-- `--weak-dimensions 512,672,832,1024` records the paper's approximate weak
-  scaling explicitly. It does not claim exactly constant work per core.
-- Accuracy defaults: three repetitions, two shapes, four existing input
-  classes (`bounded_uniform`, `full_range_uniform`, `mixed_magnitude`,
-  `cancellation_stress`) for the IME/fallback harness. Canonical OpenMP INT8
-  checks use their existing deterministic input generator; no new classes are invented.
-- `--experimental-ime` includes available IME LMUL mf2 variants. They remain
-  flagged experimental and require successful validation. They are not silently
-  included in the primary default campaign.
-- `--no-perf` disables OpenMP perf collection. Standalone runners retain their
-  existing timing/throughput fields and do not collect IPC. `--warmups` applies
-  to OpenMP; standalone runners retain their own existing behavior.
-- `--cc` selects the compiler. The existing runner/Makefile compilation flags
-  are retained; commands, build logs, compiler version and source hashes are saved.
-
-## Results
+The launchers are grouped by purpose. The experiment commands are unchanged;
+only their locations are organized.
 
 ```text
-paper_results/k1_run_01/
-  manifest.json                 exact configuration, cases and source hashes
-  coverage.json                 available, missing and excluded combinations
-  host_*.json                   host/compiler/affinity provenance
-  fig01_strong_scaling/
-    plan.json
-    case_statuses.json
-    raw_data.csv                unmodified raw fields plus plan metadata
-    summary.csv                 successful time samples, grouped per case/core
-    cases/<case-id>/
-      status.json
-      attempt_<timestamp>/
-        command.json            exact command and controlled environment
-        console.log
-        ... original raw CSV, summary, build and validation logs ...
-  fig02_weak_scaling/
-  ... fig03 through fig08 ...
+paper_scripts/
+├── orchestration/       campaign planner and internal runners
+├── single_core/         complete K1 single-core campaign
+├── standalone_int8/     standalone INT8 8x4 and 8x8 campaigns
+├── tools/               static completeness audit
+├── strong_scaling_performance/
+├── weak_scaling_performance/
+├── static_dynamic_scheduling/
+├── rvv_int8_tuning/
+├── heterogeneous_rvv_ime_end_to_end/
+├── fp32_fp64_comparison/
+├── multicore_comparison/
+└── correctness_validation/
 ```
 
-No raw results are produced by dry-run mode. Aggregate CSVs are produced when
-execution finishes or is interrupted. Failures stay in raw data and status
-files; the master returns a nonzero status if cases fail. Empty output is not
-success. Summary SD is sample standard deviation (`n-1`); a single sample has
-no reported SD. Failed cases can contain some successful samples: inspect
-`case_status` before using any summary. Correctness-only cases may have no
-timing summary. Do not move a completed results directory before resolving
-the absolute raw-log paths recorded by the original runners.
+The figure directories contain short, named entry points by design. They
+delegate to the complete workflows in `orchestration/` or to the established
+K1 module scripts; they are not standalone copies of the implementation. The
+orchestration runners contain the campaign planning, build, execution, result
+collection, and export logic.
 
-## Scientific boundaries
-
-This collects NEW data. It does not claim to reproduce the old figure values.
-INT8 LMUL 4/8 are absent/excluded, FP64 8x4 LMUL 1/2 and 1 are absent, and
-FP32 8x8 LMUL 1/2 is absent/excluded. These appear in `coverage.json`, never
-as fabricated zero measurements. LMUL labels are source-directory input LMUL,
-not accumulator EMUL. Requested unroll values do not prove compiler unrolling.
-
-Standalone RVV and IME wrappers have different packing/timing boundaries.
-Figure 5 data must retain that qualification. Figure 7 supplies matching-size,
-matching-total-thread-count OpenMP cases; select matched tile/LMUL/unroll cases
-and report the scheduling policy when computing comparisons. Scaling must
-hold the selected kernel fixed across core counts. The suite never selects
-the fastest variant silently, pools unlike configurations, or calculates an
-unqualified speedup. Plot rendering is intentionally separate from collection;
-the existing paper figure files are untouched.
-
-## Reused code and testing
-
-`runner_standalone.sh` is adapted from `run_k1_01_rvv_ime_0_7_1024.sh`;
-`runner_openmp.sh` from the OpenMP module's `run_openmp_tiled_gemm_mode.sh`;
-`runner_accuracy.sh` from `run_int8_ime_vs_rvv_accuracy_once.sh`. Changes are
-limited to project/output paths, exact kernel filtering, explicit compiler
-selection for Make, and failure reporting.
-The original scripts and C sources are unchanged.
+Run the planner without building or measuring:
 
 ```bash
-python3 -m unittest discover -s paper_scripts -p 'test_*.py' -v
+python3 paper_scripts/orchestration/paper_campaign.py --dry-run --no-perf
 ```
 
-Host tests verify planning, configuration coverage, failure reporting,
-environment isolation, CSV handling and resume protection. They do not prove
-hardware correctness, counter availability or performance on K1.
+Check the organization and shell syntax before a board run:
+
+```bash
+bash paper_scripts/tools/check_project_completeness.sh
+```
+
+The audit checks every shell script under this directory, verifies delegated
+workflow targets, and confirms that all eight paper entry points are present.
+
+The root `paper_campaign.py` remains as a compatibility entry point for older
+commands; new scripts should use the path under `orchestration/`.

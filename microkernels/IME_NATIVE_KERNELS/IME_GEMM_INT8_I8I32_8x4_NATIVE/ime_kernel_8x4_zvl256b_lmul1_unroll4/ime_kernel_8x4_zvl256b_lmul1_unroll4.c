@@ -34,9 +34,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef IME_PHASE_TIMING
-#include "ime_output_phase_hooks.h"
-#endif
 #include <sys/stat.h>
 
 #if defined(__riscv) && defined(__riscv_vector)
@@ -473,18 +470,12 @@ static void scatter_output(ime_profile profile, BLASLONG m_top, BLASLONG n_top,
                            const int32_t out[IME_MAX_OUTPUT_VALUES],
                            int32_t *C, BLASLONG ldc)
 {
-#ifdef IME_PHASE_TIMING
-    double output_phase_start = ime_output_phase_now();
-#endif
     for (int c = 0; c < IME_NR; ++c) {
         for (int r = 0; r < IME_MR; ++r) {
             size_t ci = (size_t)(n_top + c) * (size_t)ldc + (size_t)(m_top + r);
             C[ci] = add_scaled_wrap_i32(C[ci], out[output_index(profile, r, c)], alpha);
         }
     }
-#ifdef IME_PHASE_TIMING
-    ime_output_phase_add(output_phase_start);
-#endif
 }
 
 static void native_accumulate(ime_profile profile, const int8_t *A_pack,

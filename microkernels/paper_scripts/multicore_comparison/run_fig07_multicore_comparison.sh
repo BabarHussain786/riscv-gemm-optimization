@@ -2,4 +2,4 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-exec python3 "${PROJECT_ROOT}/paper_scripts/paper_campaign.py" "$@" --figures 7
+exec python3 "${PROJECT_ROOT}/paper_scripts/orchestration/paper_campaign.py" "$@" --figures 7
