@@ -24,6 +24,20 @@ export PHASE_SOURCE_ROOT="$HOME/MAT/kernels riscv rvv 1.0/FINAL/riscv-gemm-optim
 bash ./run_k1_strong_scaling_phase_copy.sh
 ```
 
-The generated `k1_strong_scaling_phase_raw.csv` is the phase-aware dataset;
-the original `paper_results` and legacy source tree are untouched.
+The default campaign uses seven measured repetitions, matching the paper.
+Each result directory contains:
 
+- `k1_strong_scaling_phase_raw.csv`: one correctly quoted row per run with
+  wall time, worker-summed packing time, and worker-summed kernel time;
+- `k1_strong_scaling_phase_summary.csv`: per-kernel/core/unroll mean, median,
+  sample standard deviation, minimum, and maximum for those three timings;
+- `k1_strong_scaling_phase_completeness.csv`: a check that every accepted row
+  contains all required phase values; and
+- `phase_log_manifest.csv`: the source-to-archive mapping for every copied
+  per-run log; and
+- `phase_logs/`: copies of the per-run logs containing the phase markers.
+
+The output stores are intentionally reported as fused with the kernel call,
+and synchronization is explicitly marked as not separately instrumented;
+the implementation has no independent output-reshape timer.  The original
+`paper_results` and legacy source tree are untouched.
