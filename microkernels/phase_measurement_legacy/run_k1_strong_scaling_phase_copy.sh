@@ -216,8 +216,11 @@ total_rows = ok_rows = complete_rows = 0
 with open(phase_raw, newline="", encoding="utf-8", errors="replace") as src:
     for row in csv.DictReader(src):
         total_rows += 1
-        if row.get("status") == "OK":
+        is_ok = row.get("status") == "OK"
+        if is_ok:
             ok_rows += 1
+        if not is_ok:
+            continue
         fields = (row.get("total_wall_sec"), row.get("packing_worker_sum_sec"),
                   row.get("kernel_worker_sum_including_output_sec"))
         try:
@@ -275,7 +278,7 @@ with open(completeness, "w", newline="", encoding="utf-8") as dst:
     writer.writerow(["phase_csv_rows", total_rows])
     writer.writerow(["status_ok_rows", ok_rows])
     writer.writerow(["rows_with_wall_packing_and_kernel", complete_rows])
-    writer.writerow(["rows_missing_any_phase_value", total_rows - complete_rows])
+    writer.writerow(["accepted_rows_missing_any_phase_value", ok_rows - complete_rows])
 PY
 }
 
@@ -313,7 +316,7 @@ if ! build_phase_summary; then
 else
     experiment_log "Phase timing summary CSV: ${PHASE_SUMMARY}"
     experiment_log "Phase completeness CSV: ${PHASE_COMPLETENESS}"
-    complete_rows="$(awk -F, 'NR > 1 && $15 != "NA" && $16 != "NA" { n++ } END { print n + 0 }' "${PHASE_RAW}")"
+    complete_rows="$(awk -F, 'NR > 1 && $13 == "OK" && $15 != "NA" && $16 != "NA" { n++ } END { print n + 0 }' "${PHASE_RAW}")"
     ok_rows="$(awk -F, 'NR > 1 && $13 == "OK" { n++ } END { print n + 0 }' "${PHASE_RAW}")"
     if [ "${ok_rows}" -eq 0 ] || [ "${complete_rows}" -ne "${ok_rows}" ]; then
         experiment_log "PHASE_RESULT=FAILED reason=missing_phase_markers ok_rows=${ok_rows} complete_rows=${complete_rows}"
