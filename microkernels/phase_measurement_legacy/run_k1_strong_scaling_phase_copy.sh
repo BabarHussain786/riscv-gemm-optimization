@@ -66,7 +66,7 @@ done
 
 start_experiment "k1_strong_scaling_phase"
 PHASE_RAW="${EXPERIMENT_DIR}/k1_strong_scaling_phase_raw.csv"
-PHASE_SUMMARY="${EXPERIMENT_DIR}/k1_strong_scaling_phase_summary.csv"
+PHASE_SUMMARY="${EXPERIMENT_DIR}/k1_strong_scaling_phase_timing_summary.csv"
 PHASE_COMPLETENESS="${EXPERIMENT_DIR}/k1_strong_scaling_phase_completeness.csv"
 PHASE_LOG_DIR="${EXPERIMENT_DIR}/phase_logs"
 PHASE_LOG_MANIFEST="${EXPERIMENT_DIR}/phase_log_manifest.csv"
@@ -311,7 +311,7 @@ if ! build_phase_summary; then
     experiment_log "PHASE_RESULT=FAILED reason=phase_summary_generation"
     EXPERIMENT_FAILURES=$((EXPERIMENT_FAILURES + 1))
 else
-    experiment_log "Phase summary CSV: ${PHASE_SUMMARY}"
+    experiment_log "Phase timing summary CSV: ${PHASE_SUMMARY}"
     experiment_log "Phase completeness CSV: ${PHASE_COMPLETENESS}"
     complete_rows="$(awk -F, 'NR > 1 && $15 != "NA" && $16 != "NA" { n++ } END { print n + 0 }' "${PHASE_RAW}")"
     ok_rows="$(awk -F, 'NR > 1 && $13 == "OK" { n++ } END { print n + 0 }' "${PHASE_RAW}")"

@@ -29,7 +29,7 @@ Each result directory contains:
 
 - `k1_strong_scaling_phase_raw.csv`: one correctly quoted row per run with
   wall time, worker-summed packing time, and worker-summed kernel time;
-- `k1_strong_scaling_phase_summary.csv`: per-kernel/core/unroll mean, median,
+- `k1_strong_scaling_phase_timing_summary.csv`: per-kernel/core/unroll mean, median,
   sample standard deviation, minimum, and maximum for those three timings;
 - `k1_strong_scaling_phase_completeness.csv`: a check that every accepted row
   contains all required phase values; and
