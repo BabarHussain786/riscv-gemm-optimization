@@ -290,9 +290,13 @@ def build_pair(point, result, config, builds, source_before):
         (BENCH / "src" / "rvv_adapter.c", []),
         (BENCH / "src" / "ime_adapter.c", ["-fno-tree-vectorize", "-fno-tree-slp-vectorize"]),
         # Most RVV sources expose CNAME; the 8x8 sources expose their full
-        # function name directly, so rename both forms to the adapter entry.
+        # function name directly.  These sources export the precision-suffixed
+        # symbol (<kernel>_i8i32), not the base directory name.  Rename the
+        # exact exported symbol so rvv_adapter.c resolves bench_rvv_entry and
+        # the IME fallback can retain its original symbol for ime_adapter.c.
         (Path(point["rvv_source"]), ["-DCNAME=bench_rvv_entry",
-                                     f"-D{point['rvv_kernel']}=bench_rvv_entry"]),
+                                     f"-D{point['rvv_kernel']}=bench_rvv_entry",
+                                     f"-D{point['rvv_kernel']}_i8i32=bench_rvv_entry"]),
         (Path(point["ime_fallback"]), []),
     ]
     objects = []
