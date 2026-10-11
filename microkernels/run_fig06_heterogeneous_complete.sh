@@ -259,6 +259,8 @@ def build_pair(point, result, config, builds, source_before):
     pair = (point["rvv_kernel"], point["ime_kernel"])
     if pair in builds:
         binary, meta = builds[pair]
+        if meta.get("status") != "OK":
+            raise ValueError(meta.get("error", f"Previous build failed for {pair}; see {meta.get('build_dir', 'build log')}"))
         if sha(binary) != meta["executable_sha256"]:
             raise ValueError("Cached benchmark binary changed")
         return binary, meta
@@ -287,7 +289,10 @@ def build_pair(point, result, config, builds, source_before):
         (BENCH / "src" / "bench.c", []),
         (BENCH / "src" / "rvv_adapter.c", []),
         (BENCH / "src" / "ime_adapter.c", ["-fno-tree-vectorize", "-fno-tree-slp-vectorize"]),
-        (Path(point["rvv_source"]), ["-DCNAME=bench_rvv_entry"]),
+        # Most RVV sources expose CNAME; the 8x8 sources expose their full
+        # function name directly, so rename both forms to the adapter entry.
+        (Path(point["rvv_source"]), ["-DCNAME=bench_rvv_entry",
+                                     f"-D{point['rvv_kernel']}=bench_rvv_entry"]),
         (Path(point["ime_fallback"]), []),
     ]
     objects = []
@@ -305,7 +310,9 @@ def build_pair(point, result, config, builds, source_before):
         commands.append(command)
         compile_command(log, command, config["timeout"])
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-        raise ValueError(f"Build failed for {pair}; see {log}: {exc}") from exc
+        error = f"Build failed for {pair}; see {log}: {exc}"
+        builds[pair] = (None, {"status": "FAILED", "error": error, "build_dir": str(build_dir)})
+        raise ValueError(error) from exc
     if any(not Path(path).is_file() or sha(path) != digest
            for path, digest in source_before.items()):
         raise ValueError("Source changed during compilation")
