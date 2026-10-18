@@ -58,7 +58,8 @@ microkernels/
 ├── RVV_IME_GEMM_ACCURACY_VALIDATION/   Independent INT64 reference checker
 ├── paper_scripts/                      Paper campaign entry points and runners
 ├── datasets/                           Figure-organized measured exports
-└── benchmarking/                       Verification records and campaign support
+├── benchmarking/                       Verification records and campaign support
+└── extra/                              Legacy scripts and generated archives
 ```
 
 ## K1 execution model
@@ -79,7 +80,7 @@ the RVV kernels or change worker affinity.
 Run these checks from the repository root before a board campaign:
 
 ```bash
-bash paper_scripts/tools/check_project_completeness.sh
+bash paper_scripts/extra/tools/check_project_completeness.sh
 python3 paper_scripts/orchestration/paper_campaign.py --dry-run --no-perf
 ```
 
@@ -110,20 +111,19 @@ the Fig. 8 script listed above. The source checker remains separate from
 
 ## Dataset policy
 
-The figure dataset index is [`datasets/README.md`](datasets/README.md), and the
-machine-readable inventory is [`datasets/MANIFEST.csv`](datasets/MANIFEST.csv).
-Within an available figure export:
+The figure dataset index is [`datasets/README.md`](datasets/README.md). Each
+experiment keeps its data in `main_dataset/` and `extra_dataset/`; older
+root-level exports are preserved under `datasets/extra/legacy_root/`.
+Within an experiment dataset:
 
 ```text
-clean/       summaries and statistics used for analysis
-raw/         per-run records
-metadata/    logs, manifests, failure records, and campaign plans
+main_dataset/  cleaned data, raw records, and metadata used by the experiment
+extra_dataset/ source campaigns, phase records, and supplementary evidence
 ```
 
-The manifest distinguishes complete, archived, partial, and pending datasets.
 Missing K1 measurements are documented rather than inferred from plots or
-replaced with synthetic values. `paper_results/` is optional planner output and
-is not required to build the project or use the measured datasets.
+replaced with synthetic values. Legacy outputs and optional planner artifacts
+are preserved under `extra/` and are not required to build the project.
 
 ## Requirements
 

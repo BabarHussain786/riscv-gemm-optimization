@@ -309,7 +309,7 @@ class AnalysisTests(unittest.TestCase):
                 self.assertTrue(any(path.name.startswith(prefix) for path in plots), prefix)
             for path in plots:
                 self.assertGreater(path.stat().st_size, 1000)
-                self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(path.read_bytes()[:8], b"\x89PNG\n\x1a\n")
 
     def test_reader_ignores_legacyraw_and_deduplicates(self):
         with fixture_directory() as temporary:
